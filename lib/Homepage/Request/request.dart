@@ -33,7 +33,8 @@ class _RequestFormPageState extends State<RequestFormPage> {
   // ตัวแปร State สำหรับเก็บค่าที่เลือก
   String? _priority = 'ด่วน';
   String? _supplier = '-';
-  String _budgetNo = 'นอก Budget';
+  String _nature = 'สร้าง';
+  String _category = 'ไฟฟ้า';
 
   @override
   Widget build(BuildContext context) {
@@ -241,9 +242,40 @@ class _RequestFormPageState extends State<RequestFormPage> {
             ),
 
             // ------------------------------------------------
-            // 9. Budget No & Remark
+            // 9. ลักษณะ และ หมวดหมู่ที่ซ่อม
             // ------------------------------------------------
             const SizedBox(height: 10),
+            Row(
+              children: [
+                const SizedBox(
+                  width: 100,
+                  child: Text(
+                    'ลักษณะ :',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Container(
+                  height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    color: Colors.white,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _nature,
+                      items: ['สร้าง', 'ซ่อม', 'สั่งทำ']
+                          .map(
+                            (e) => DropdownMenuItem(value: e, child: Text(e)),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _nature = v!),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Row(
               children: [
                 const SizedBox(
@@ -262,13 +294,24 @@ class _RequestFormPageState extends State<RequestFormPage> {
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: _budgetNo,
-                      items: ['นอก Budget', 'ใน Budget']
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _budgetNo = v!),
+                      value: _category,
+                      items:
+                          [
+                                'ไฟฟ้า',
+                                'ปะปา',
+                                'แอร์',
+                                'อินเตอร์เน็ต',
+                                'รถยนต์/โฟล์คลิฟท์',
+                                'หอพัก',
+                                'เครื่องจักร',
+                                'อื่นๆ',
+                              ]
+                              .map(
+                                (e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)),
+                              )
+                              .toList(),
+                      onChanged: (v) => setState(() => _category = v!),
                     ),
                   ),
                 ),
@@ -292,7 +335,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
                         maxLines: null,
                         decoration: InputDecoration(
                           border: InputBorder.none,
-                          hintText: 'รายละเอียดเพิ่มเติม...',
+                          hintText: 'รายละเอียด',
                         ),
                       ),
                     ),
