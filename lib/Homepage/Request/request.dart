@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,6 +38,9 @@ class _RequestFormPageState extends State<RequestFormPage> {
   String? _supplier = '-';
   String _nature = 'สร้าง';
   String _category = 'ไฟฟ้า';
+  final ImagePicker _picker = ImagePicker();
+  final List<XFile> _images = [];
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +347,113 @@ class _RequestFormPageState extends State<RequestFormPage> {
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+            const Text(
+              'แนบรูป / ไฟล์ (สูงสุด 5)',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(5, (index) {
+                final hasImage = index < _images.length;
+                return GestureDetector(
+                  onTap: () async {
+                    if (!hasImage && _images.length < 5) {
+                      final XFile? picked = await _picker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 85,
+                      );
+                      if (picked != null) setState(() => _images.add(picked));
+                    }
+                  },
+                  onLongPress: hasImage
+                      ? () => setState(() => _images.removeAt(index))
+                      : null,
+                  child: Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      color: Colors.white,
+                    ),
+                    child: hasImage
+                        ? Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.file(
+                                File(_images[index].path),
+                                fit: BoxFit.cover,
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _images.removeAt(index)),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : const Center(
+                            child: Icon(Icons.add_a_photo, color: Colors.grey),
+                          ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        setState(() => _isSubmitting = true);
+                        // TODO: replace with actual submit logic (upload, API call)
+                        await Future.delayed(const Duration(seconds: 1));
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('ส่งใบแจ้งซ่อมเรียบร้อย'),
+                          ),
+                        );
+                        setState(() {
+                          _images.clear();
+                          _isSubmitting = false;
+                        });
+                      },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'ส่งใบแจ้งซ่อม',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
               ),
             ),
           ],
