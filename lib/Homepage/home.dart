@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import './Request/request.dart';
 
 void main() {
   runApp(const MyApp());
@@ -240,7 +241,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RequestFormPage(),
+                          ),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: const BorderSide(color: Colors.grey),
