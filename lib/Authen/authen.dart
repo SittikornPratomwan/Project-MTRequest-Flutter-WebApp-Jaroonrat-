@@ -320,10 +320,7 @@ class _AuthenState extends State<Authen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) =>
-                const HomePage(location: '', locationId: null),
-          ),
+          MaterialPageRoute(builder: (context) => const PurchaseReportPage()),
         );
       }
     } else {
