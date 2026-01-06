@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import './Request/request.dart';
+import './datail/detail.dart';
 
 void main() {
   runApp(const MyApp());
@@ -386,9 +387,20 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         DataCell(
                           SizedBox(
                             width: 200, // จำกัดความกว้าง Topic ไม่ให้ยาวเกิน
-                            child: Text(
-                              item.topic,
-                              overflow: TextOverflow.ellipsis,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const PurchaseDetailPage(),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                item.topic,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
                         ),

@@ -41,6 +41,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
   bool _isSubmitting = false;
+  final TextEditingController _daysController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +141,8 @@ class _RequestFormPageState extends State<RequestFormPage> {
                               width: 50,
                               height: 30,
                               child: TextField(
+                                controller: _daysController,
+                                enabled: _priority == 'โครงการ',
                                 decoration: InputDecoration(
                                   contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 5,
