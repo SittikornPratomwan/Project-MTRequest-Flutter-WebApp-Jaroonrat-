@@ -325,6 +325,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
             ),
             const SizedBox(height: 10),
             _buildTextFieldRow(label: 'หัวข้อ :'),
+            const SizedBox(height: 8),
             Container(
               height: 200,
               decoration: BoxDecoration(
