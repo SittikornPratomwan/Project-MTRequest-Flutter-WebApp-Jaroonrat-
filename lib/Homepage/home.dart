@@ -65,7 +65,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     PurchaseItem(
       no: 'MT20467/68',
       type: 'ด่วน',
-      topic: 'ขออนุมัติสั่งซื้อมอเตอร์ปั๊มน้ำหอพัก',
+      topic: 'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก',
       reqDate: 'รอการอนุมัติ',
       prDate: '-',
       reqBy: 'จารุวัฒน์ แพงศรี',
@@ -76,7 +76,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     PurchaseItem(
       no: 'MT20466/68',
       type: 'ปกติ',
-      topic: 'ขออนุมัติสั่งซื้อสายไฟสำหรับตู้สนาม',
+      topic: 'ขออนุมัติซ่อมสายไฟสำหรับตู้สนาม',
       reqDate: 'รอการอนุมัติ',
       prDate: '-',
       reqBy: 'นที กันภัย',
@@ -87,7 +87,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     PurchaseItem(
       no: 'HR03247/68',
       type: 'ด่วน',
-      topic: 'ขออนุมัติสั่งซื้อบัตรและหมึกปริ้น',
+      topic: 'ขออนุมัติซ่อมบัตรและหมึกปริ้น',
       reqDate: '16/12/68',
       prDate: '-',
       reqBy: 'ประกายทิพย์ อิ่มสมบัติ',
@@ -99,7 +99,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     PurchaseItem(
       no: 'L501193/68',
       type: 'ปกติ',
-      topic: 'ขออนุมัติสั่งซื้อแผ่นเพลทแผนกEDP5',
+      topic: 'ขออนุมัติซ่อมแผ่นเพลทแผนกEDP5',
       reqDate: 'รอการอนุมัติ',
       prDate: '-',
       reqBy: 'ธันยพร สิงห์พร',
@@ -110,7 +110,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     PurchaseItem(
       no: 'MT20465/68',
       type: 'ด่วน',
-      topic: 'ขออนุมัติสั่งซื้อฝาเกียร์โฟล์คลิฟท์เบอร์ 4',
+      topic: 'ขออนุมัติซ่อมฝาเกียร์โฟล์คลิฟท์เบอร์ 4',
       reqDate: 'รอการอนุมัติ',
       prDate: '-',
       reqBy: 'จารุวัฒน์ แพงศรี',
@@ -141,7 +141,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'ค้นหา',
+          'MT request',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.grey[300],
@@ -333,7 +333,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     ),
                     DataColumn(
                       label: Text(
-                        'จัดซื้อรับPR',
+                        '---',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

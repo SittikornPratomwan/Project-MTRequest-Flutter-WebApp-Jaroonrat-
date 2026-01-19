@@ -10,12 +10,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Purchase Detail',
+      title: 'MT request Detail',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: Colors.white,
-        fontFamily:
-            'Sans-serif', // แนะนำให้ใช้ Google Fonts: Sarabun หรือ Kanit
+        fontFamily: 'Sans-serif',
       ),
       home: const PurchaseDetailPage(),
     );
@@ -27,13 +26,12 @@ class PurchaseDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // กำหนดสีหลักตามภาพ (โทนเขียวอมฟ้า)
     final Color labelColor = Colors.teal[700]!;
     final Color valueColor = Colors.blue[900]!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Purchase Request Detail'),
+        title: const Text('MT request Detail'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
@@ -109,7 +107,7 @@ class PurchaseDetailPage extends StatelessWidget {
                 _buildTableRow('Mode :', 'Purchase', labelColor, valueColor),
                 _buildTableRow(
                   'หัวข้อสั่งซื้อ :',
-                  'ขออนุมัติสั่งซื้อมอเตอร์ปั๊มน้ำหอพัก',
+                  'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก',
                   labelColor,
                   valueColor,
                 ),
@@ -212,9 +210,9 @@ class PurchaseDetailPage extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Text(
-                      'ขออนุมัติสั่งซื้อมอเตอร์ปั๊มน้ำหอพัก\n'
+                      'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก\n'
                       'เนื่องจากมอเตอร์ปั๊มเดิมมอเตอร์ลงกราวด์และปั๊มน้ำใบพัดแตกเพลาใบพัดร่องลิ่มชำรุดทำให้ใช้งานไม่ได้ปัจจุบันใช้งานปั๊มตัวเล็กจึงอาจปั๊มน้ำให้ใช้งานช้าและไม่มีสแปร์เพื่อสลับ\n'
-                      'เปลี่ยนใช้งานดังนั้นจึงขออนุมัติสั่งซื้อมอเตอร์ปั๊มน้ำดังรายการ\n'
+                      'เปลี่ยนใช้งานดังนั้นจึงขออนุมัติซ่อมมอเตอร์ปั๊มน้ำดังรายการ\n'
                       '1.มอเตอร์ปั๊ม STAC จำนวน 1 ตัว\n'
                       'จึงเรียนมาเพื่อขออนุมัติ',
                       style: TextStyle(color: valueColor, height: 1.5),
