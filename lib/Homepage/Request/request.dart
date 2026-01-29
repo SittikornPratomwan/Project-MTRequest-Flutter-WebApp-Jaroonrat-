@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(const MyApp());
@@ -38,10 +40,140 @@ class _RequestFormPageState extends State<RequestFormPage> {
   String? _supplier = '-';
   String _nature = 'สร้าง';
   String _category = 'ไฟฟ้า';
+  late DateTime _requestDate;
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
   bool _isSubmitting = false;
   final TextEditingController _daysController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _requestDate = DateTime.now();
+  }
+
+  // ฟังก์ชันแปลงวันที่เป็นรูปแบบไทย (dd/mm/yyyy)
+  String _formatThaiDate(DateTime date) {
+    final months = [
+      'มกราคม',
+      'กุมภาพันธ์',
+      'มีนาคม',
+      'เมษายน',
+      'พฤษภาคม',
+      'มิถุนายน',
+      'กรกฎาคม',
+      'สิงหาคม',
+      'กันยายน',
+      'ตุลาคม',
+      'พฤศจิกายน',
+      'ธันวาคม',
+    ];
+    final day = date.day.toString().padLeft(2, '0');
+    final month = months[date.month - 1];
+    final year = (date.year + 543).toString(); // Convert to Buddhist Era
+    return '$day / $month / $year';
+  }
+
+  // ฟังก์ชันแปลง priority ให้เป็นค่าที่ API ต้องการ
+  String _mapPriority(String? priority) {
+    switch (priority) {
+      case 'ด่วน':
+        return 'urgent';
+      case 'ปกติ':
+        return 'normal';
+      case 'โครงการ':
+        return 'project';
+      default:
+        return 'normal';
+    }
+  }
+
+  // ฟังก์ชันส่งข้อมูลไป API
+  Future<void> _submitRequest() async {
+    if (_titleController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณากรอกหัวข้อ')));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      // สร้างวันที่ในรูปแบบ ISO 8601
+      final now = DateTime.now();
+      final createdAt = now.toUtc().toIso8601String();
+
+      // สร้าง payload
+      final payload = {
+        'priority': _mapPriority(_priority),
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'created_at': _requestDate.toUtc().toIso8601String(),
+        'nature': _nature,
+        'category': _category,
+        'location': _supplier,
+        'department': 'IMD',
+      };
+
+      print('Sending request to API...');
+      print('Payload: ${jsonEncode(payload)}');
+
+      final response = await http
+          .post(
+            Uri.parse('http://26.99.205.41:9000/drugs/repair-requests'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ส่งใบแจ้งซ่อมเรียบร้อย'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Clear form
+        _titleController.clear();
+        _descriptionController.clear();
+        _images.clear();
+        setState(() {
+          _priority = 'ด่วน';
+          _nature = 'สร้าง';
+          _category = 'ไฟฟ้า';
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด: ${response.statusCode}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -220,11 +352,14 @@ class _RequestFormPageState extends State<RequestFormPage> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                _buildDropdownMock('11'),
-                const Text(' / '),
-                _buildDropdownMock('ธันวาคม'),
-                const Text(' / '),
-                _buildDropdownMock('2568'),
+                Text(
+                  _formatThaiDate(_requestDate),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
                 const SizedBox(width: 5),
                 const Text(
                   '(วันที่ร้องขอ)',
@@ -327,7 +462,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
               ],
             ),
             const SizedBox(height: 10),
-            _buildTextFieldRow(label: 'หัวข้อ :'),
+            _buildTextFieldRow(label: 'หัวข้อ :', controller: _titleController),
             const SizedBox(height: 8),
             Container(
               height: 200,
@@ -338,12 +473,13 @@ class _RequestFormPageState extends State<RequestFormPage> {
               child: Column(
                 children: [
                   // Text Area
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.all(8.0),
                       child: TextField(
+                        controller: _descriptionController,
                         maxLines: null,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           border: InputBorder.none,
                           hintText: 'รายละเอียด',
                         ),
@@ -427,23 +563,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _isSubmitting
-                    ? null
-                    : () async {
-                        setState(() => _isSubmitting = true);
-                        // TODO: replace with actual submit logic (upload, API call)
-                        await Future.delayed(const Duration(seconds: 1));
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('ส่งใบแจ้งซ่อมเรียบร้อย'),
-                          ),
-                        );
-                        setState(() {
-                          _images.clear();
-                          _isSubmitting = false;
-                        });
-                      },
+                onPressed: _isSubmitting ? null : _submitRequest,
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
                 child: _isSubmitting
                     ? const SizedBox(
@@ -509,7 +629,11 @@ class _RequestFormPageState extends State<RequestFormPage> {
   }
 
   // สร้าง Row แบบ Label : Input Field
-  Widget _buildTextFieldRow({required String label, String? initialValue}) {
+  Widget _buildTextFieldRow({
+    required String label,
+    String? initialValue,
+    TextEditingController? controller,
+  }) {
     return Row(
       children: [
         SizedBox(
@@ -524,6 +648,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
             height: 35,
             child: TextFormField(
               initialValue: initialValue,
+              controller: controller,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
                 contentPadding: EdgeInsets.symmetric(horizontal: 10),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import './Request/request.dart';
 import './datail/detail.dart';
 
@@ -60,76 +62,103 @@ class PurchaseReportPage extends StatefulWidget {
 }
 
 class _PurchaseReportPageState extends State<PurchaseReportPage> {
-  // ข้อมูลตัวอย่าง (Mock Data) ตามภาพ
-  final List<PurchaseItem> items = [
-    PurchaseItem(
-      no: 'MT20467/68',
-      type: 'ด่วน',
-      topic: 'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก',
-      reqDate: 'รอการอนุมัติ',
-      prDate: '-',
-      reqBy: 'จารุวัฒน์ แพงศรี',
-      dept: 'MT',
-      status: 'รออนุมัติ',
-      approver: 'จักรพันธุ์ บุญเพ็ง',
-    ),
-    PurchaseItem(
-      no: 'MT20466/68',
-      type: 'ปกติ',
-      topic: 'ขออนุมัติซ่อมสายไฟสำหรับตู้สนาม',
-      reqDate: 'รอการอนุมัติ',
-      prDate: '-',
-      reqBy: 'นที กันภัย',
-      dept: 'MT',
-      status: 'รออนุมัติ',
-      approver: 'สุริยา กันภัย',
-    ),
-    PurchaseItem(
-      no: 'HR03247/68',
-      type: 'ด่วน',
-      topic: 'ขออนุมัติซ่อมบัตรและหมึกปริ้น',
-      reqDate: '16/12/68',
-      prDate: '-',
-      reqBy: 'ประกายทิพย์ อิ่มสมบัติ',
-      dept: 'HR',
-      status: 'อนุมัติ',
-      approver: '',
-      isHighlight: true,
-    ),
-    PurchaseItem(
-      no: 'L501193/68',
-      type: 'ปกติ',
-      topic: 'ขออนุมัติซ่อมแผ่นเพลทแผนกEDP5',
-      reqDate: 'รอการอนุมัติ',
-      prDate: '-',
-      reqBy: 'ธันยพร สิงห์พร',
-      dept: 'L5',
-      status: 'รออนุมัติ',
-      approver: 'วิชัย ทิพยพร',
-    ),
-    PurchaseItem(
-      no: 'MT20465/68',
-      type: 'ด่วน',
-      topic: 'ขออนุมัติซ่อมฝาเกียร์โฟล์คลิฟท์เบอร์ 4',
-      reqDate: 'รอการอนุมัติ',
-      prDate: '-',
-      reqBy: 'จารุวัฒน์ แพงศรี',
-      dept: 'MT',
-      status: 'รออนุมัติ',
-      approver: 'จักรพันธุ์ บุญเพ็ง',
-    ),
-    PurchaseItem(
-      no: 'DL06588/68',
-      type: 'ปกติ',
-      topic: 'ขออนุมัติออก PO บ.ชัยทัต โปรดักท์ จก.',
-      reqDate: 'รอการอนุมัติ',
-      prDate: '-',
-      reqBy: 'วรรณภา โฉมนาค',
-      dept: 'DL',
-      status: 'รออนุมัติ',
-      approver: 'ชลาลัย สมบุญ',
-    ),
-  ];
+  late Future<List<PurchaseItem>> _futureItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureItems = fetchRepairRequests();
+  }
+
+  // ฟังก์ชันเรียก API
+  Future<List<PurchaseItem>> fetchRepairRequests() async {
+    try {
+      print('Fetching data from API...');
+      final response = await http
+          .get(Uri.parse('http://26.99.205.41:9000/drugs/repair-requests'))
+          .timeout(const Duration(seconds: 10));
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        print('Decoded JSON: $jsonData');
+
+        // Handle different response formats
+        List<dynamic> items = [];
+
+        if (jsonData is List) {
+          items = jsonData;
+        } else if (jsonData is Map) {
+          // Try common API response keys
+          if (jsonData.containsKey('data')) {
+            items = jsonData['data'] is List
+                ? jsonData['data']
+                : [jsonData['data']];
+          } else if (jsonData.containsKey('results')) {
+            items = jsonData['results'] is List
+                ? jsonData['results']
+                : [jsonData['results']];
+          } else if (jsonData.containsKey('items')) {
+            items = jsonData['items'] is List
+                ? jsonData['items']
+                : [jsonData['items']];
+          } else if (jsonData.containsKey('repair_requests')) {
+            items = jsonData['repair_requests'] is List
+                ? jsonData['repair_requests']
+                : [jsonData['repair_requests']];
+          } else {
+            // If no data key, treat the entire object as single item
+            items = [jsonData];
+          }
+        }
+
+        print('Total items found: ${items.length}');
+
+        List<PurchaseItem> purchaseItems = items.map((item) {
+          print('Processing item: $item');
+          return PurchaseItem(
+            no: item['job_no']?.toString() ?? item['id']?.toString() ?? '',
+            type: item['priority']?.toString() ?? 'ปกติ',
+            topic:
+                item['title']?.toString() ??
+                item['description']?.toString() ??
+                '',
+            reqDate:
+                item['request_date']?.toString() ??
+                item['created_date']?.toString() ??
+                'รอการอนุมัติ',
+            prDate:
+                item['pr_date']?.toString() ??
+                item['po_date']?.toString() ??
+                '-',
+            reqBy:
+                item['requested_by']?.toString() ??
+                item['requester']?.toString() ??
+                '',
+            dept: item['department']?.toString() ?? '',
+            status: item['status']?.toString() ?? 'รออนุมัติ',
+            approver:
+                item['approver']?.toString() ??
+                item['approved_by']?.toString() ??
+                '',
+            isHighlight: (item['status']?.toString() ?? '').contains('อนุมัติ'),
+          );
+        }).toList();
+        print('Successfully loaded ${purchaseItems.length} items');
+        return purchaseItems;
+      } else {
+        throw Exception(
+          'Failed to load repair requests: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('Error fetching data: $e');
+      // Return empty list or default data on error
+      return [];
+    }
+  }
 
   // ตัวแปรสำหรับ Filter
   String? selectedPriority = 'ทั้งหมด';
@@ -298,154 +327,170 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           // 3. Data Table Section (ตาราง)
           // ------------------------------------
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
-                  headingRowColor: MaterialStateProperty.all(Colors.grey[400]),
-                  columnSpacing: 20,
-                  border: TableBorder.all(color: Colors.grey[300]!),
-                  columns: const [
-                    DataColumn(
-                      label: Text(
-                        'No.',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+            child: FutureBuilder<List<PurchaseItem>>(
+              future: _futureItems,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No data available'));
+                }
+
+                List<PurchaseItem> items = snapshot.data!;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: MaterialStateProperty.all(
+                        Colors.grey[400],
                       ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Type',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Topic',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'วันต้องการ',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        '---',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Req.By',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Dept',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Status',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    DataColumn(
-                      label: Text(
-                        'Finish',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                  rows: items.map((item) {
-                    return DataRow(
-                      color: MaterialStateProperty.resolveWith<Color?>(
-                        (states) => Colors.white,
-                      ),
-                      cells: [
-                        DataCell(
-                          Text(
-                            item.no,
-                            style: const TextStyle(color: Colors.brown),
+                      columnSpacing: 20,
+                      border: TableBorder.all(color: Colors.grey[300]!),
+                      columns: const [
+                        DataColumn(
+                          label: Text(
+                            'No.',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                        DataCell(
-                          Text(
-                            item.type,
-                            style: TextStyle(
-                              color: item.type == 'ด่วน'
-                                  ? Colors.red
-                                  : Colors.black,
-                            ),
+                        DataColumn(
+                          label: Text(
+                            'Type',
+                            style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
-                        DataCell(
-                          SizedBox(
-                            width: 200, // จำกัดความกว้าง Topic ไม่ให้ยาวเกิน
-                            child: InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const PurchaseDetailPage(),
-                                  ),
-                                );
-                              },
-                              child: Text(
-                                item.topic,
-                                overflow: TextOverflow.ellipsis,
+                        DataColumn(
+                          label: Text(
+                            'Topic',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'วันต้องการ',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            '---',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Req.By',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Dept',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Status',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            'Finish',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                      rows: items.map((item) {
+                        return DataRow(
+                          color: MaterialStateProperty.resolveWith<Color?>(
+                            (states) => Colors.white,
+                          ),
+                          cells: [
+                            DataCell(
+                              Text(
+                                item.no,
+                                style: const TextStyle(color: Colors.brown),
                               ),
                             ),
-                          ),
-                        ),
-                        DataCell(Text(item.reqDate)),
-                        DataCell(Text(item.prDate)),
-                        DataCell(Text(item.reqBy)),
-                        DataCell(
-                          Text(
-                            item.dept,
-                            style: const TextStyle(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        DataCell(
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                            DataCell(
                               Text(
-                                item.status,
+                                item.type,
                                 style: TextStyle(
-                                  color: item.status == 'อนุมัติ'
-                                      ? Colors.green
-                                      : Colors.orange[800],
+                                  color: item.type == 'ด่วน'
+                                      ? Colors.red
+                                      : Colors.black,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              SizedBox(
+                                width: 200,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const PurchaseDetailPage(),
+                                      ),
+                                    );
+                                  },
+                                  child: Text(
+                                    item.topic,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(Text(item.reqDate)),
+                            DataCell(Text(item.prDate)),
+                            DataCell(Text(item.reqBy)),
+                            DataCell(
+                              Text(
+                                item.dept,
+                                style: const TextStyle(
+                                  color: Colors.green,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (item.approver.isNotEmpty)
-                                Text(
-                                  item.approver,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const DataCell(
-                          Icon(Icons.edit, color: Colors.orange, size: 20),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
-              ),
+                            ),
+                            DataCell(
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.status,
+                                    style: TextStyle(
+                                      color: item.status == 'อนุมัติ'
+                                          ? Colors.green
+                                          : Colors.orange[800],
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (item.approver.isNotEmpty)
+                                    Text(
+                                      item.approver,
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const DataCell(
+                              Icon(Icons.edit, color: Colors.orange, size: 20),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
