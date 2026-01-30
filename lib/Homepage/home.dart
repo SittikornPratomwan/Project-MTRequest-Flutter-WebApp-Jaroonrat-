@@ -271,13 +271,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        final result = await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const RequestFormPage(),
                           ),
                         );
+                        // Refresh data if form was submitted successfully
+                        if (result == true) {
+                          setState(() {
+                            _futureItems = fetchRepairRequests();
+                          });
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,

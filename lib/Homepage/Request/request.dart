@@ -160,6 +160,11 @@ class _RequestFormPageState extends State<RequestFormPage> {
           _nature = 'สร้าง';
           _category = 'ไฟฟ้า';
         });
+        // Navigate back to home page after 1.5 seconds to show the SnackBar
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
