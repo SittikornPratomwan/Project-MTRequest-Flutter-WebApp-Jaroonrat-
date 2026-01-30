@@ -90,6 +90,14 @@ class _RequestFormPageState extends State<RequestFormPage> {
     }
   }
 
+  // ฟังก์ชันแปลงวันที่เป็นรูปแบบ yyyy-mm-dd
+  String _formatDateForApi(DateTime date) {
+    final year = date.year;
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
   // ฟังก์ชันส่งข้อมูลไป API
   Future<void> _submitRequest() async {
     if (_titleController.text.isEmpty) {
@@ -108,14 +116,16 @@ class _RequestFormPageState extends State<RequestFormPage> {
 
       // สร้าง payload
       final payload = {
-        'priority': _mapPriority(_priority),
         'title': _titleController.text,
+        'priority': _mapPriority(_priority),
         'description': _descriptionController.text,
-        'created_at': _requestDate.toUtc().toIso8601String(),
-        'nature': _nature,
-        'category': _category,
-        'location': _supplier,
-        'department': 'IMD',
+        'requester_id': 1,
+        'dp_id': 1,
+        'l_id': 1,
+        'status_code': 'in_approval',
+        'current_status': 'new',
+        'current_step_order': 1,
+        'required_date': _formatDateForApi(_requestDate),
       };
 
       print('Sending request to API...');
