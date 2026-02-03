@@ -1,5 +1,34 @@
 import 'package:flutter/material.dart';
 
+// Data Model for detail page
+class PurchaseItem {
+  final String no;
+  final String type;
+  final String topic;
+  final String reqDate;
+  final String prDate;
+  final String reqBy;
+  final String dept;
+  final String status;
+  final String approver;
+  final bool isHighlight;
+  final Map<String, dynamic>? rawData;
+
+  PurchaseItem({
+    required this.no,
+    required this.type,
+    required this.topic,
+    required this.reqDate,
+    required this.prDate,
+    required this.reqBy,
+    required this.dept,
+    required this.status,
+    required this.approver,
+    this.isHighlight = false,
+    this.rawData,
+  });
+}
+
 void main() {
   runApp(const MyApp());
 }
@@ -22,12 +51,29 @@ class MyApp extends StatelessWidget {
 }
 
 class PurchaseDetailPage extends StatelessWidget {
-  const PurchaseDetailPage({super.key});
+  final PurchaseItem? item;
+
+  const PurchaseDetailPage({super.key, this.item});
 
   @override
   Widget build(BuildContext context) {
     final Color labelColor = Colors.teal[700]!;
     final Color valueColor = Colors.blue[900]!;
+
+    // Use passed data or default data
+    final displayItem =
+        item ??
+        PurchaseItem(
+          no: 'N/A',
+          type: 'N/A',
+          topic: 'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก',
+          reqDate: 'N/A',
+          prDate: 'N/A',
+          reqBy: 'N/A',
+          dept: 'N/A',
+          status: 'N/A',
+          approver: 'N/A',
+        );
 
     return Scaffold(
       appBar: AppBar(
@@ -77,7 +123,7 @@ class PurchaseDetailPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      'คุณ จารุวัฒน์ แพงศรี',
+                      displayItem.reqBy,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: valueColor,
@@ -85,7 +131,7 @@ class PurchaseDetailPage extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'แผนก MT',
+                      displayItem.dept,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: valueColor,
@@ -107,22 +153,24 @@ class PurchaseDetailPage extends StatelessWidget {
                 _buildTableRow('Mode :', 'Purchase', labelColor, valueColor),
                 _buildTableRow(
                   'หัวข้อสั่งซื้อ :',
-                  'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก',
+                  displayItem.topic,
                   labelColor,
                   valueColor,
                 ),
                 _buildTableRow(
                   'เรียน/สำเนาถึง :',
-                  'คุณวัฒนะ , คุณจักรพันธุ์ , คุณสุรชัย , คุณปรีชา',
+                  displayItem.approver.isNotEmpty
+                      ? displayItem.approver
+                      : 'ไม่มีข้อมูล',
                   labelColor,
                   valueColor,
                 ),
                 _buildTableRow(
                   'ความสำคัญ :',
-                  'ด่วน',
+                  displayItem.type,
                   labelColor,
                   valueColor,
-                ), // อาจจะใส่สีแดงถ้าต้องการ
+                ),
                 _buildTableRow(
                   'ระยะเวลาดำเนินการ :',
                   '3 วัน',
@@ -153,22 +201,27 @@ class PurchaseDetailPage extends StatelessWidget {
                   labelColor,
                   valueColor,
                 ),
-                _buildTableRow('PR No :', 'MT20467/68', labelColor, valueColor),
+                _buildTableRow(
+                  'PR No :',
+                  displayItem.no,
+                  labelColor,
+                  valueColor,
+                ),
                 _buildTableRow(
                   'วันที่สร้าง PR :',
-                  '11/12/2568 13:44:36',
+                  displayItem.reqDate,
                   labelColor,
                   valueColor,
                 ),
                 _buildTableRow(
                   'วันที่แก้ไข :',
-                  '11/12/2568 13:44:36',
+                  displayItem.reqDate,
                   labelColor,
                   valueColor,
                 ),
                 _buildTableRow(
                   'วันที่ต้องการสินค้า :',
-                  '11 / 12 / 2568',
+                  displayItem.reqDate,
                   labelColor,
                   valueColor,
                 ),
@@ -210,11 +263,7 @@ class PurchaseDetailPage extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Text(
-                      'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก\n'
-                      'เนื่องจากมอเตอร์ปั๊มเดิมมอเตอร์ลงกราวด์และปั๊มน้ำใบพัดแตกเพลาใบพัดร่องลิ่มชำรุดทำให้ใช้งานไม่ได้ปัจจุบันใช้งานปั๊มตัวเล็กจึงอาจปั๊มน้ำให้ใช้งานช้าและไม่มีสแปร์เพื่อสลับ\n'
-                      'เปลี่ยนใช้งานดังนั้นจึงขออนุมัติซ่อมมอเตอร์ปั๊มน้ำดังรายการ\n'
-                      '1.มอเตอร์ปั๊ม STAC จำนวน 1 ตัว\n'
-                      'จึงเรียนมาเพื่อขออนุมัติ',
+                      displayItem.topic,
                       style: TextStyle(color: valueColor, height: 1.5),
                     ),
                   ),
@@ -230,15 +279,20 @@ class PurchaseDetailPage extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'รายละเอียด คลิก ',
+                  'สถานะ : ',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: labelColor,
                   ),
                 ),
-                const Text(
-                  'ดูรายละเอียด',
-                  style: TextStyle(decoration: TextDecoration.underline),
+                Text(
+                  displayItem.status,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: displayItem.status == 'อนุมัติ'
+                        ? Colors.green
+                        : Colors.orange[800],
+                  ),
                 ),
               ],
             ),
@@ -266,32 +320,12 @@ class PurchaseDetailPage extends StatelessWidget {
                 // Data Rows
                 _buildApprovalRow(
                   '1',
-                  'วัฒนะ จุไข่',
-                  'อนุมัติ\n4/12/2568 13:36:45',
-                  '-',
-                ),
-                _buildApprovalRow(
-                  '2',
-                  'จักรพันธุ์ บุญเพ็ง',
-                  'อนุมัติ\n5/12/2568 9:29:11',
-                  '-',
-                ),
-                _buildApprovalRow(
-                  '3',
-                  'วิทูล จันประทักษ์',
-                  'อนุมัติ\n5/12/2568 9:36:53',
-                  '-',
-                ),
-                _buildApprovalRow(
-                  '4',
-                  'สุรชัย ทองอ่อน',
-                  'อนุมัติ\n6/12/2568 15:52:19',
-                  '-',
-                ),
-                _buildApprovalRow(
-                  '5',
-                  'จีรัฐณัฏฐ์ กุลจิรานวัตร',
-                  'อนุมัติ\n8/12/2568 13:08:36',
+                  displayItem.approver.isNotEmpty
+                      ? displayItem.approver
+                      : 'ไม่มีข้อมูล',
+                  displayItem.status == 'อนุมัติ'
+                      ? 'อนุมัติ\n${displayItem.reqDate}'
+                      : '-',
                   '-',
                 ),
               ],

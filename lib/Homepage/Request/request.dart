@@ -110,10 +110,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // สร้างวันที่ในรูปแบบ ISO 8601
-      final now = DateTime.now();
-      final createdAt = now.toUtc().toIso8601String();
-
       // สร้าง payload
       final payload = {
         'title': _titleController.text,
@@ -674,24 +670,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
           ),
         ),
       ],
-    );
-  }
-
-  // Mock Dropdown วันที่
-  Widget _buildDropdownMock(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey[400]!),
-      ),
-      child: Row(
-        children: [
-          Text(text),
-          const SizedBox(width: 4),
-          const Icon(Icons.arrow_drop_down, size: 18),
-        ],
-      ),
     );
   }
 }

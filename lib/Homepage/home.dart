@@ -26,33 +26,8 @@ class MyApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------
-// 1. Data Model: จำลองโครงสร้างข้อมูลในตาราง
+// 1. Data Model: ใช้ PurchaseItem จาก detail.dart
 // ---------------------------------------------------------
-class PurchaseItem {
-  final String no;
-  final String type; // ด่วน/ปกติ
-  final String topic;
-  final String reqDate; // วันต้องการ
-  final String prDate; // จัดซื้อรับ PR
-  final String reqBy;
-  final String dept;
-  final String status;
-  final String approver; // คนอนุมัติ (อยู่ในช่อง Status)
-  final bool isHighlight; // สำหรับแถวสีเขียว
-
-  PurchaseItem({
-    required this.no,
-    required this.type,
-    required this.topic,
-    required this.reqDate,
-    required this.prDate,
-    required this.reqBy,
-    required this.dept,
-    required this.status,
-    required this.approver,
-    this.isHighlight = false,
-  });
-}
 
 class PurchaseReportPage extends StatefulWidget {
   const PurchaseReportPage({super.key});
@@ -442,7 +417,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            const PurchaseDetailPage(),
+                                            PurchaseDetailPage(item: item),
                                       ),
                                     );
                                   },
