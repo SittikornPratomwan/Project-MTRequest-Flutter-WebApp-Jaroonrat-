@@ -150,81 +150,40 @@ class PurchaseDetailPage extends StatelessWidget {
                 1: FlexColumnWidth(), // ความกว้างของ Value
               },
               children: [
-                _buildTableRow('Mode :', 'Purchase', labelColor, valueColor),
                 _buildTableRow(
                   'หัวข้อสั่งซื้อ :',
                   displayItem.topic,
                   labelColor,
                   valueColor,
                 ),
-                _buildTableRow(
-                  'เรียน/สำเนาถึง :',
-                  displayItem.approver.isNotEmpty
-                      ? displayItem.approver
-                      : 'ไม่มีข้อมูล',
-                  labelColor,
-                  valueColor,
-                ),
+                if (displayItem.approver.isNotEmpty)
+                  _buildTableRow(
+                    'เรียน/สำเนาถึง :',
+                    displayItem.approver,
+                    labelColor,
+                    valueColor,
+                  ),
                 _buildTableRow(
                   'ความสำคัญ :',
                   displayItem.type,
                   labelColor,
                   valueColor,
                 ),
-                _buildTableRow(
-                  'ระยะเวลาดำเนินการ :',
-                  '3 วัน',
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'ประเภท :',
-                  'ค่าใช้จ่ายอื่นๆ',
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'ประเภทการซื้อ :',
-                  'ค่าใช้จ่ายอื่นๆ',
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'ราคาโดยประมาณ :',
-                  'น้อยกว่าหรือเท่ากับ 50,000 บาท',
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'Budget :',
-                  'นอก Budget',
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'PR No :',
-                  displayItem.no,
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'วันที่สร้าง PR :',
-                  displayItem.reqDate,
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'วันที่แก้ไข :',
-                  displayItem.reqDate,
-                  labelColor,
-                  valueColor,
-                ),
-                _buildTableRow(
-                  'วันที่ต้องการสินค้า :',
-                  displayItem.reqDate,
-                  labelColor,
-                  valueColor,
-                ),
+                if (displayItem.no.isNotEmpty)
+                  _buildTableRow(
+                    'PR No :',
+                    displayItem.no,
+                    labelColor,
+                    valueColor,
+                  ),
+                if (displayItem.reqDate.isNotEmpty &&
+                    displayItem.reqDate != 'N/A')
+                  _buildTableRow(
+                    'วันที่ต้องการสินค้า :',
+                    displayItem.reqDate,
+                    labelColor,
+                    valueColor,
+                  ),
               ],
             ),
 
