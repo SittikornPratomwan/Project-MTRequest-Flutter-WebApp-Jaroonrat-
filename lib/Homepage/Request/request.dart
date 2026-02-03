@@ -37,14 +37,10 @@ class RequestFormPage extends StatefulWidget {
 class _RequestFormPageState extends State<RequestFormPage> {
   // ตัวแปร State สำหรับเก็บค่าที่เลือก
   String? _priority = 'ด่วน';
-  String? _supplier = '-';
-  String _nature = 'สร้าง';
-  String _category = 'ไฟฟ้า';
   late DateTime _requestDate;
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
   bool _isSubmitting = false;
-  final TextEditingController _daysController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
@@ -153,8 +149,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
         _images.clear();
         setState(() {
           _priority = 'ด่วน';
-          _nature = 'สร้าง';
-          _category = 'ไฟฟ้า';
         });
         // Navigate back to home page after 1.5 seconds to show the SnackBar
         await Future.delayed(const Duration(milliseconds: 1500));
@@ -199,51 +193,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ------------------------------------------------
-            // 1. Report By Section
-            // ------------------------------------------------
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'Report By :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Column(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 100,
-                      color: Colors.blue[100],
-                      child: const Icon(
-                        Icons.person,
-                        size: 50,
-                        color: Colors.blue,
-                      ), // Placeholder รูปภาพ
-                    ),
-                    const SizedBox(height: 5),
-                    const Text(
-                      'User Name',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 15),
-
-            // ------------------------------------------------
-            // 2. No. Input
-            // ------------------------------------------------
-            _buildTextFieldRow(label: 'No. :', initialValue: 'IMD00612/68'),
-
-            // ------------------------------------------------
-            // 3. Priority Section
+            // Priority Section (เก็บลง API)
             // ------------------------------------------------
             const SizedBox(height: 10),
             Row(
@@ -275,34 +225,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
                         'กรณีที่ต้องใช้ระยะเวลา... ให้กำหนดวันที่ต้องการให้เหมาะสม',
                         Colors.red,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 30.0, top: 4),
-                        child: Row(
-                          children: [
-                            const Text('-ระยะเวลาที่ต้องการของ '),
-                            SizedBox(
-                              width: 50,
-                              height: 30,
-                              child: TextField(
-                                controller: _daysController,
-                                enabled: _priority == 'โครงการ',
-                                decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 0,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(0),
-                                  ),
-                                  fillColor: Colors.white,
-                                  filled: true,
-                                ),
-                              ),
-                            ),
-                            const Text(' วัน'),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -310,48 +232,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
             ),
 
             // ------------------------------------------------
-            // 4. Supplier Section
-            // ------------------------------------------------
-            const SizedBox(height: 15),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'Location :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _buildSimpleRadio(
-                            val: 'JRP',
-                            group: _supplier,
-                            onChanged: (v) => setState(() => _supplier = v),
-                          ),
-                          const Text('JRP'),
-                          const SizedBox(width: 20),
-                          _buildSimpleRadio(
-                            val: 'JRPE',
-                            group: _supplier,
-                            onChanged: (v) => setState(() => _supplier = v),
-                          ),
-                          const Text('JRPE'),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // ------------------------------------------------
-            // 5. Request Date
+            // Request Date
             // ------------------------------------------------
             const SizedBox(height: 10),
             Row(
@@ -380,98 +261,8 @@ class _RequestFormPageState extends State<RequestFormPage> {
             ),
 
             // ------------------------------------------------
-            // 6. Department & Topic
+            // Topic and Description
             // ------------------------------------------------
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'Department :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const Text('IMD'),
-              ],
-            ),
-
-            // ------------------------------------------------
-            // 9. ลักษณะ และ หมวดหมู่ที่ซ่อม
-            // ------------------------------------------------
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'ลักษณะ :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Container(
-                  height: 30,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    color: Colors.white,
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _nature,
-                      items: ['สร้าง', 'ซ่อม', 'สั่งทำ']
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _nature = v!),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'หมวดหมู่ที่ซ่อม :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Container(
-                  height: 30,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    color: Colors.white,
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _category,
-                      items:
-                          [
-                                'ไฟฟ้า',
-                                'ปะปา',
-                                'แอร์',
-                                'อินเตอร์เน็ต',
-                                'รถยนต์/โฟล์คลิฟท์',
-                                'หอพัก',
-                                'เครื่องจักร',
-                                'อื่นๆ',
-                              ]
-                              .map(
-                                (e) =>
-                                    DropdownMenuItem(value: e, child: Text(e)),
-                              )
-                              .toList(),
-                      onChanged: (v) => setState(() => _category = v!),
-                    ),
-                  ),
-                ),
-              ],
-            ),
             const SizedBox(height: 10),
             _buildTextFieldRow(label: 'หัวข้อ :', controller: _titleController),
             const SizedBox(height: 8),
@@ -626,18 +417,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
     );
   }
 
-  // สร้าง Radio ธรรมดา
-  Widget _buildSimpleRadio({
-    required String val,
-    required String? group,
-    required Function(String?) onChanged,
-  }) {
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: Radio<String>(value: val, groupValue: group, onChanged: onChanged),
-    );
-  }
+  // Note: simple location radio removed (not saved to API)
 
   // สร้าง Row แบบ Label : Input Field
   Widget _buildTextFieldRow({

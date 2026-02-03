@@ -43,6 +43,15 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   void initState() {
     super.initState();
     _futureItems = fetchRepairRequests();
+    _futureItems.then((items) {
+      setState(() {
+        final set = <String>{};
+        for (var it in items) {
+          if (it.type.isNotEmpty) set.add(it.type);
+        }
+        _priorityOptions = ['ทั้งหมด', ...set.toList()];
+      });
+    });
   }
 
   // ฟังก์ชันเรียก API
@@ -138,6 +147,15 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   // ตัวแปรสำหรับ Filter
   String? selectedPriority = 'ทั้งหมด';
   int selectedRadio = 0; // 0=All, 1=Finished, etc.
+  List<String> _priorityOptions = ['ทั้งหมด'];
+
+  // ฟังก์ชันกรองข้อมูลตามความสำคัญ (ใช้ค่า priority จาก API)
+  List<PurchaseItem> _filterItems(List<PurchaseItem> items) {
+    if (selectedPriority == null || selectedPriority == 'ทั้งหมด') {
+      return items;
+    }
+    return items.where((item) => item.type == selectedPriority).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +195,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       height: 35,
                       child: DropdownButton<String>(
                         value: selectedPriority,
-                        items: ['ทั้งหมด', 'ด่วน', 'ปกติ'].map((String value) {
+                        items: _priorityOptions.map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
                             child: Text(value),
@@ -320,6 +338,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 }
 
                 List<PurchaseItem> items = snapshot.data!;
+                List<PurchaseItem> filteredItems = _filterItems(items);
                 return SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   child: SingleChildScrollView(
@@ -386,7 +405,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           ),
                         ),
                       ],
-                      rows: items.map((item) {
+                      rows: filteredItems.map((item) {
                         return DataRow(
                           color: MaterialStateProperty.resolveWith<Color?>(
                             (states) => Colors.white,
