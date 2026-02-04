@@ -14,6 +14,7 @@ class PurchaseItem {
   final String dept;
   final String status;
   final String approver;
+  final String createdAt;
   final bool isHighlight;
   final Map<String, dynamic>? rawData;
 
@@ -27,6 +28,7 @@ class PurchaseItem {
     required this.dept,
     required this.status,
     required this.approver,
+    this.createdAt = '',
     this.isHighlight = false,
     this.rawData,
   });
@@ -236,6 +238,20 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     return null;
   }
 
+  String _formatCreatedAt(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      final y = dt.year.toString().padLeft(4, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      final d = dt.day.toString().padLeft(2, '0');
+      final hh = dt.hour.toString().padLeft(2, '0');
+      final mm = dt.minute.toString().padLeft(2, '0');
+      return '$y-$m-$d $hh:$mm';
+    } catch (_) {
+      return raw; // fallback: show original string
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color labelColor = Colors.teal[700]!;
@@ -332,7 +348,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               },
               children: [
                 _buildTableRow(
-                  'หัวข้อสั่งซื้อ :',
+                  'หัวข้อการซ่อม :',
                   displayItem.topic,
                   labelColor,
                   valueColor,
@@ -352,7 +368,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ),
                 if (displayItem.no.isNotEmpty)
                   _buildTableRow(
-                    'PR No :',
+                    'MT No :',
                     displayItem.no,
                     labelColor,
                     valueColor,
@@ -360,8 +376,16 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 if (displayItem.reqDate.isNotEmpty &&
                     displayItem.reqDate != 'N/A')
                   _buildTableRow(
-                    'วันที่ต้องการสินค้า :',
+                    'วันที่ต้องการ :',
                     displayItem.reqDate,
+                    labelColor,
+                    valueColor,
+                  ),
+                if (displayItem.createdAt.isNotEmpty &&
+                    displayItem.createdAt != 'N/A')
+                  _buildTableRow(
+                    'สร้างเมื่อวันที่ :',
+                    _formatCreatedAt(displayItem.createdAt),
                     labelColor,
                     valueColor,
                   ),

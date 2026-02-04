@@ -128,6 +128,11 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 item['approver']?.toString() ??
                 item['approved_by']?.toString() ??
                 '',
+            createdAt:
+                item['created_at']?.toString() ??
+                item['created_date']?.toString() ??
+                item['createdAt']?.toString() ??
+                '',
             isHighlight: (item['status']?.toString() ?? '').contains('อนุมัติ'),
             rawData: item is Map ? Map<String, dynamic>.from(item) : null,
           );
