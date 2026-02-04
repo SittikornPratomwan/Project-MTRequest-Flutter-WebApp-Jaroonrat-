@@ -166,6 +166,12 @@ class _RequestFormPageState extends State<RequestFormPage> {
               );
               final req = http.MultipartRequest('POST', uri);
 
+              // Include the created repair request id so the server can associate files
+              // with the newly created request. Add both camelCase and snake_case
+              // variants in case the backend expects one of them.
+              req.fields['repairRequestId'] = createdId;
+              req.fields['repair_request_id'] = createdId;
+
               // ใช้ bytes สำหรับ Web (fromPath ใช้ไม่ได้บน Web)
               final bytes = await file.readAsBytes();
               final fileName = file.name;
