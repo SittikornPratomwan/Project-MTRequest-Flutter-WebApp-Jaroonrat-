@@ -346,6 +346,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
+                      showCheckboxColumn: false,
                       headingRowColor: MaterialStateProperty.all(
                         Colors.grey[400],
                       ),
