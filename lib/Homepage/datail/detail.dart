@@ -415,86 +415,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
             // -------------------------------------------------------
             // Attached Files Section (รูปภาพแนบ)
+            // (interactive debug UI removed)
             // -------------------------------------------------------
-            if (_currentFetchId != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Fetching files for id: ${_currentFetchId ?? ''}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Copy id',
-                          icon: const Icon(Icons.copy, size: 18),
-                          onPressed: () {
-                            Clipboard.setData(
-                              ClipboardData(text: _currentFetchId ?? ''),
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Copied id to clipboard'),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    if (_currentFetchUri != null)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Endpoint: ${_currentFetchUri ?? ''}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Copy endpoint',
-                            icon: const Icon(Icons.copy, size: 18),
-                            onPressed: () {
-                              Clipboard.setData(
-                                ClipboardData(text: _currentFetchUri ?? ''),
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Copied endpoint to clipboard'),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => _fetchFilesForId('66'),
-                          child: const Text('ใช้ id:66'),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton(
-                          onPressed: () =>
-                              _fetchFilesForId(_currentFetchId ?? '66'),
-                          child: const Text('รีโหลด id ปัจจุบัน'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
             if (_loadingFiles)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
