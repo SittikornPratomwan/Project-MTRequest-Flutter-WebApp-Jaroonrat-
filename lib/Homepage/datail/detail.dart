@@ -168,6 +168,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               final normalized = _normalizeUrl(item);
               urls.add(normalized);
             } else if (item is Map) {
+              bool foundUrl = false;
               final candidates = [
                 'url',
                 'path',
@@ -180,11 +181,12 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 if (item[k] != null) {
                   final normalized = _normalizeUrl(item[k].toString());
                   urls.add(normalized);
+                  foundUrl = true;
                   break;
                 }
               }
               // fallback: search recursively for any string that looks like an image path
-              if (urls.isEmpty) {
+              if (!foundUrl) {
                 final found = _findImageString(item);
                 if (found != null) {
                   final normalized = _normalizeUrl(found);
@@ -193,7 +195,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               }
             }
           }
-        } else {}
+        }
         if (mounted) setState(() => _fileUrls = urls);
       }
     } catch (e) {
