@@ -1,9 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 
 void main() {
   runApp(const MyApp());
@@ -40,6 +40,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
   late DateTime _requestDate;
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
+  final Map<int, Uint8List> _imageBytes = {}; // เก็บ bytes สำหรับแสดงบน Web
   bool _isSubmitting = false;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -137,19 +138,101 @@ class _RequestFormPageState extends State<RequestFormPage> {
       if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // Try to parse returned id for uploading files
+        String? createdId;
+        try {
+          final respJson = jsonDecode(response.body);
+          if (respJson is Map) {
+            createdId =
+                respJson['id']?.toString() ??
+                respJson['repair_request_id']?.toString() ??
+                respJson['job_no']?.toString();
+            // nested under data?
+            createdId ??= respJson['data'] is Map
+                ? respJson['data']['id']?.toString()
+                : null;
+          }
+        } catch (e) {
+          print('Failed to decode creation response: $e');
+        }
+
+        // If we have files and we got an id, upload each file
+        if (createdId != null && _images.isNotEmpty) {
+          for (var i = 0; i < _images.length; i++) {
+            final file = _images[i];
+            try {
+              final uri = Uri.parse(
+                'http://26.99.205.41:9000/drugs/repair-requests/$createdId/files',
+              );
+              final req = http.MultipartRequest('POST', uri);
+
+              // ใช้ bytes สำหรับ Web (fromPath ใช้ไม่ได้บน Web)
+              final bytes = await file.readAsBytes();
+              final fileName = file.name;
+
+              // ระบุ content-type ของไฟล์
+              String mimeType = 'image/jpeg';
+              if (fileName.toLowerCase().endsWith('.png')) {
+                mimeType = 'image/png';
+              } else if (fileName.toLowerCase().endsWith('.gif')) {
+                mimeType = 'image/gif';
+              } else if (fileName.toLowerCase().endsWith('.webp')) {
+                mimeType = 'image/webp';
+              }
+
+              req.files.add(
+                http.MultipartFile.fromBytes(
+                  'files', // ลองใช้ 'files' แทน 'file'
+                  bytes,
+                  filename: fileName,
+                  contentType: MediaType.parse(mimeType),
+                ),
+              );
+
+              print('Uploading file: $fileName to $uri');
+              print('Content-Type: $mimeType, Size: ${bytes.length} bytes');
+
+              final streamed = await req.send().timeout(
+                const Duration(seconds: 20),
+              );
+              final respStr = await streamed.stream.bytesToString();
+              print(
+                'Upload file response status: ${streamed.statusCode} body: $respStr',
+              );
+              if (streamed.statusCode != 200 && streamed.statusCode != 201) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'อัปโหลดรูปไม่สำเร็จ (status ${streamed.statusCode})',
+                    ),
+                  ),
+                );
+              }
+            } catch (e) {
+              print('Error uploading file: $e');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('เกิดข้อผิดพลาดขณะอัปโหลดรูป: $e')),
+              );
+            }
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ส่งใบแจ้งซ่อมเรียบร้อย'),
             backgroundColor: Colors.green,
           ),
         );
+
         // Clear form
         _titleController.clear();
         _descriptionController.clear();
         _images.clear();
+        _imageBytes.clear();
         setState(() {
           _priority = 'ด่วน';
         });
+
         // Navigate back to home page after 1.5 seconds to show the SnackBar
         await Future.delayed(const Duration(milliseconds: 1500));
         if (mounted) {
@@ -310,11 +393,32 @@ class _RequestFormPageState extends State<RequestFormPage> {
                         source: ImageSource.gallery,
                         imageQuality: 85,
                       );
-                      if (picked != null) setState(() => _images.add(picked));
+                      if (picked != null) {
+                        // อ่าน bytes สำหรับแสดงผลบน Web
+                        final bytes = await picked.readAsBytes();
+                        setState(() {
+                          _images.add(picked);
+                          _imageBytes[_images.length - 1] = bytes;
+                        });
+                      }
                     }
                   },
                   onLongPress: hasImage
-                      ? () => setState(() => _images.removeAt(index))
+                      ? () => setState(() {
+                          _imageBytes.remove(index);
+                          _images.removeAt(index);
+                          // Re-index bytes
+                          final newBytes = <int, Uint8List>{};
+                          for (var i = 0; i < _images.length; i++) {
+                            if (_imageBytes.containsKey(
+                              i > index ? i + 1 : i,
+                            )) {
+                              newBytes[i] = _imageBytes[i > index ? i + 1 : i]!;
+                            }
+                          }
+                          _imageBytes.clear();
+                          _imageBytes.addAll(newBytes);
+                        })
                       : null,
                   child: Container(
                     width: 90,
@@ -327,16 +431,36 @@ class _RequestFormPageState extends State<RequestFormPage> {
                         ? Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.file(
-                                File(_images[index].path),
-                                fit: BoxFit.cover,
-                              ),
+                              _imageBytes.containsKey(index)
+                                  ? Image.memory(
+                                      _imageBytes[index]!,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
                               Positioned(
                                 top: 4,
                                 right: 4,
                                 child: GestureDetector(
-                                  onTap: () =>
-                                      setState(() => _images.removeAt(index)),
+                                  onTap: () => setState(() {
+                                    _imageBytes.remove(index);
+                                    _images.removeAt(index);
+                                    // Re-index bytes
+                                    final newBytes = <int, Uint8List>{};
+                                    for (var i = 0; i < _images.length; i++) {
+                                      if (_imageBytes.containsKey(
+                                        i >= index ? i + 1 : i,
+                                      )) {
+                                        newBytes[i] =
+                                            _imageBytes[i >= index
+                                                ? i + 1
+                                                : i]!;
+                                      }
+                                    }
+                                    _imageBytes.clear();
+                                    _imageBytes.addAll(newBytes);
+                                  }),
                                   child: Container(
                                     padding: const EdgeInsets.all(2),
                                     decoration: BoxDecoration(
