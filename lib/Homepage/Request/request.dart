@@ -174,28 +174,50 @@ class _RequestFormPageState extends State<RequestFormPage> {
 
               // ใช้ bytes สำหรับ Web (fromPath ใช้ไม่ได้บน Web)
               final bytes = await file.readAsBytes();
-              final fileName = file.name;
 
-              // ระบุ content-type ของไฟล์
+              // เริ่มจากเดิมชื่อไฟล์จาก client (อาจเป็นชื่อที่ browser/OS ให้มา)
+              final origName = file.name ?? 'image';
+
+              // ระบุ content-type ของไฟล์ โดยดูจากนามสกุลถ้ามี
               String mimeType = 'image/jpeg';
-              if (fileName.toLowerCase().endsWith('.png')) {
+              final lower = origName.toLowerCase();
+              if (lower.endsWith('.png')) {
                 mimeType = 'image/png';
-              } else if (fileName.toLowerCase().endsWith('.gif')) {
+              } else if (lower.endsWith('.gif')) {
                 mimeType = 'image/gif';
-              } else if (fileName.toLowerCase().endsWith('.webp')) {
+              } else if (lower.endsWith('.webp')) {
                 mimeType = 'image/webp';
+              } else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+                mimeType = 'image/jpeg';
               }
+
+              // sanitize ชื่อไฟล์: เอาเฉพาะตัวอักษร ภาษาอังกฤษ ตัวเลข จุด ขีด และ underscore
+              String safeName = origName.replaceAll(
+                RegExp(r'[^A-Za-z0-9_.-]'),
+                '_',
+              );
+
+              // ถ้าไม่มีนามสกุล ให้เติมจาก mimeType
+              if (!safeName.contains('.')) {
+                final ext = mimeType.split('/').last;
+                safeName = '$safeName.$ext';
+              }
+
+              // เพิ่ม timestamp เพื่อป้องกันการชนของชื่อไฟล์บน server
+              final uploadName =
+                  '${DateTime.now().millisecondsSinceEpoch}_$safeName';
 
               req.files.add(
                 http.MultipartFile.fromBytes(
                   'files', // ลองใช้ 'files' แทน 'file'
                   bytes,
-                  filename: fileName,
+                  filename: uploadName,
                   contentType: MediaType.parse(mimeType),
                 ),
               );
 
-              print('Uploading file: $fileName to $uri');
+              print('Uploading file: $uploadName to $uri');
+              print('Original filename: $origName -> upload as: $uploadName');
               print('Content-Type: $mimeType, Size: ${bytes.length} bytes');
 
               final streamed = await req.send().timeout(

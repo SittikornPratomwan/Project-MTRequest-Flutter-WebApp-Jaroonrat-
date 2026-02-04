@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 // Data Model for detail page
 class PurchaseItem {
@@ -50,10 +53,188 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class PurchaseDetailPage extends StatelessWidget {
+class PurchaseDetailPage extends StatefulWidget {
   final PurchaseItem? item;
 
   const PurchaseDetailPage({super.key, this.item});
+
+  @override
+  State<PurchaseDetailPage> createState() => _PurchaseDetailPageState();
+}
+
+class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
+  final String _baseHost = 'http://26.99.205.41:9000';
+  List<String> _fileUrls = [];
+  bool _loadingFiles = false;
+  String? _currentFetchId;
+  String? _currentFetchUri;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFilesForItem();
+  }
+
+  Future<void> _loadFilesForItem() async {
+    String? id;
+    final raw = widget.item?.rawData;
+    if (raw != null) {
+      id = raw['id']?.toString() ?? raw['repair_request_id']?.toString();
+    } else {}
+
+    // If no id, resolve from repair-requests list
+    if (id == null) {
+      id = await _resolveIdFromList();
+    }
+
+    if (id == null) {
+      debugPrint('ERROR: Could not resolve any id!');
+      return;
+    }
+
+    await _fetchFilesForId(id);
+  }
+
+  Future<String?> _resolveIdFromList() async {
+    try {
+      final uri = Uri.parse('$_baseHost/drugs/repair-requests');
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) {
+        return null;
+      }
+
+      final decoded = jsonDecode(resp.body);
+      List<dynamic>? list;
+      if (decoded is List) {
+        list = decoded;
+      } else if (decoded is Map && decoded['data'] is List) {
+        list = decoded['data'];
+      }
+      if (list == null || list.isEmpty) return null;
+
+      final targetNo = widget.item?.no;
+      final targetTopic = widget.item?.topic;
+
+      for (final entry in list) {
+        if (entry is! Map) continue;
+        final entryId = entry['id']?.toString();
+        if (entryId == null) continue;
+
+        // Match by no
+        if (targetNo != null && targetNo != 'N/A') {
+          final candidates = [entry['no'], entry['pr_no'], entry['job_no']];
+          for (final c in candidates) {
+            if (c != null && c.toString() == targetNo) return entryId;
+          }
+        }
+        // Match by topic
+        if (targetTopic != null && targetTopic != 'N/A') {
+          final t = entry['topic'] ?? entry['title'] ?? entry['description'];
+          if (t != null && t.toString() == targetTopic) return entryId;
+        }
+      }
+      // Fallback: first item
+      final first = list.first;
+      if (first is Map && first['id'] != null) return first['id'].toString();
+    } catch (e) {}
+    return null;
+  }
+
+  Future<void> _fetchFilesForId(String id) async {
+    final uri = Uri.parse('$_baseHost/drugs/repair-requests/$id/files');
+    setState(() {
+      _loadingFiles = true;
+      _currentFetchId = id;
+      _currentFetchUri = uri.toString();
+    });
+    try {
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        final List<String> urls = [];
+
+        List<dynamic>? list;
+        if (decoded is List) {
+          list = decoded;
+        } else if (decoded is Map && decoded['data'] is List) {
+          list = decoded['data'];
+        }
+
+        if (list != null) {
+          for (final item in list) {
+            if (item is String) {
+              final normalized = _normalizeUrl(item);
+              urls.add(normalized);
+            } else if (item is Map) {
+              final candidates = [
+                'url',
+                'path',
+                'file',
+                'filename',
+                'location',
+                'src',
+              ];
+              for (final k in candidates) {
+                if (item[k] != null) {
+                  final normalized = _normalizeUrl(item[k].toString());
+                  urls.add(normalized);
+                  break;
+                }
+              }
+              // fallback: search recursively for any string that looks like an image path
+              if (urls.isEmpty) {
+                final found = _findImageString(item);
+                if (found != null) {
+                  final normalized = _normalizeUrl(found);
+                  urls.add(normalized);
+                }
+              }
+            }
+          }
+        } else {}
+        if (mounted) setState(() => _fileUrls = urls);
+      }
+    } catch (e) {
+    } finally {
+      if (mounted) setState(() => _loadingFiles = false);
+    }
+  }
+
+  String _normalizeUrl(String raw) {
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('/')) return '$_baseHost$raw';
+    return '$_baseHost/$raw';
+  }
+
+  // Recursively search a Map/List for a string that looks like an image/file path
+  String? _findImageString(dynamic node) {
+    if (node == null) return null;
+    final exts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+    if (node is String) {
+      final low = node.toLowerCase();
+      for (final e in exts) {
+        if (low.contains(e)) return node;
+      }
+      // also consider full URLs without extension (rare)
+      if (low.startsWith('http')) return node;
+      return null;
+    }
+    if (node is Map) {
+      for (final v in node.values) {
+        final found = _findImageString(v);
+        if (found != null) return found;
+      }
+      return null;
+    }
+    if (node is List) {
+      for (final v in node) {
+        final found = _findImageString(v);
+        if (found != null) return found;
+      }
+      return null;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +243,7 @@ class PurchaseDetailPage extends StatelessWidget {
 
     // Use passed data or default data
     final displayItem =
-        item ??
+        widget.item ??
         PurchaseItem(
           no: 'N/A',
           type: 'N/A',
@@ -233,6 +414,152 @@ class PurchaseDetailPage extends StatelessWidget {
             const SizedBox(height: 20),
 
             // -------------------------------------------------------
+            // Attached Files Section (รูปภาพแนบ)
+            // -------------------------------------------------------
+            if (_currentFetchId != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Fetching files for id: ${_currentFetchId ?? ''}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Copy id',
+                          icon: const Icon(Icons.copy, size: 18),
+                          onPressed: () {
+                            Clipboard.setData(
+                              ClipboardData(text: _currentFetchId ?? ''),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Copied id to clipboard'),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    if (_currentFetchUri != null)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Endpoint: ${_currentFetchUri ?? ''}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Copy endpoint',
+                            icon: const Icon(Icons.copy, size: 18),
+                            onPressed: () {
+                              Clipboard.setData(
+                                ClipboardData(text: _currentFetchUri ?? ''),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Copied endpoint to clipboard'),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => _fetchFilesForId('66'),
+                          child: const Text('ใช้ id:66'),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: () =>
+                              _fetchFilesForId(_currentFetchId ?? '66'),
+                          child: const Text('รีโหลด id ปัจจุบัน'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            if (_loadingFiles)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            if (!_loadingFiles && _fileUrls.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ไฟล์แนบ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: labelColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _fileUrls.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final url = _fileUrls[i];
+                        return GestureDetector(
+                          onTap: () => _showFullImage(context, url),
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              color: Colors.grey[200],
+                            ),
+                            child: Image.network(
+                              url,
+                              fit: BoxFit.cover,
+                              errorBuilder: (c, e, s) => const Center(
+                                child: Icon(Icons.broken_image, size: 40),
+                              ),
+                              loadingBuilder: (c, child, progress) {
+                                if (progress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            if (!_loadingFiles && _fileUrls.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'ไม่มีไฟล์แนบ',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ),
+
+            // -------------------------------------------------------
             // 3. Approval Table Section (ตารางอนุมัติ)
             // -------------------------------------------------------
             Row(
@@ -291,6 +618,39 @@ class PurchaseDetailPage extends StatelessWidget {
             ),
 
             const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullImage(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              title: const Text('รูปภาพ'),
+              automaticallyImplyLeading: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            InteractiveViewer(
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                errorBuilder: (c, e, s) => const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Icon(Icons.broken_image, size: 64),
+                ),
+              ),
+            ),
           ],
         ),
       ),

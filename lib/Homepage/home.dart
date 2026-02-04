@@ -38,6 +38,7 @@ class PurchaseReportPage extends StatefulWidget {
 
 class _PurchaseReportPageState extends State<PurchaseReportPage> {
   late Future<List<PurchaseItem>> _futureItems;
+  PurchaseItem? _selectedItem;
 
   @override
   void initState() {
@@ -128,6 +129,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 item['approved_by']?.toString() ??
                 '',
             isHighlight: (item['status']?.toString() ?? '').contains('อนุมัติ'),
+            rawData: item is Map ? Map<String, dynamic>.from(item) : null,
           );
         }).toList();
         print('Successfully loaded ${purchaseItems.length} items');
@@ -407,6 +409,21 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       ],
                       rows: filteredItems.map((item) {
                         return DataRow(
+                          selected: _selectedItem == item,
+                          onSelectChanged: (selected) {
+                            setState(() {
+                              _selectedItem = selected == true ? item : null;
+                            });
+                            if (selected == true) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      PurchaseDetailPage(item: item),
+                                ),
+                              );
+                            }
+                          },
                           color: MaterialStateProperty.resolveWith<Color?>(
                             (states) => Colors.white,
                           ),
@@ -430,20 +447,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             DataCell(
                               SizedBox(
                                 width: 200,
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            PurchaseDetailPage(item: item),
-                                      ),
-                                    );
-                                  },
-                                  child: Text(
-                                    item.topic,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                child: Text(
+                                  item.topic,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
