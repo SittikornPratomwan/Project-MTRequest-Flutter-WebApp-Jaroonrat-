@@ -40,10 +40,23 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   late Future<List<PurchaseItem>> _futureItems;
   PurchaseItem? _selectedItem;
 
+  // Pagination variables
+  int _currentPage = 1;
+  final int _limit = 15;
+  int _totalItems = 0;
+  bool _hasMoreData = true;
+
+  int get _offset => (_currentPage - 1) * _limit;
+  int get _totalPages => (_totalItems / _limit).ceil();
+
   @override
   void initState() {
     super.initState();
-    _futureItems = fetchRepairRequests();
+    _loadData();
+  }
+
+  void _loadData() {
+    _futureItems = fetchRepairRequests(_limit, _offset);
     _futureItems.then((items) {
       setState(() {
         final set = <String>{};
@@ -51,17 +64,38 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           if (it.type.isNotEmpty) set.add(it.type);
         }
         _priorityOptions = ['ทั้งหมด', ...set.toList()];
+        _hasMoreData = items.length >= _limit;
       });
     });
   }
 
+  void _goToPage(int page) {
+    if (page < 1) return;
+    if (_totalItems > 0 && page > _totalPages) return;
+    setState(() {
+      _currentPage = page;
+      _loadData();
+    });
+  }
+
+  void _nextPage() {
+    if (_hasMoreData) {
+      _goToPage(_currentPage + 1);
+    }
+  }
+
+  void _previousPage() {
+    _goToPage(_currentPage - 1);
+  }
+
   // ฟังก์ชันเรียก API
-  Future<List<PurchaseItem>> fetchRepairRequests() async {
+  Future<List<PurchaseItem>> fetchRepairRequests(int limit, int offset) async {
     try {
-      print('Fetching data from API...');
-      final response = await http
-          .get(Uri.parse('http://26.99.205.41:9000/drugs/repair-requests'))
-          .timeout(const Duration(seconds: 10));
+      print('Fetching data from API... (limit: $limit, offset: $offset)');
+      final uri = Uri.parse(
+        'http://26.99.205.41:9000/drugs/repair-requests?limit=$limit&offset=$offset',
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       print('Response status: ${response.statusCode}');
       print('Response body: ${response.body}');
@@ -73,8 +107,16 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         // Handle different response formats
         List<dynamic> items = [];
 
+        // Extract total count if available
+        if (jsonData is Map && jsonData.containsKey('total')) {
+          _totalItems = jsonData['total'] is int
+              ? jsonData['total']
+              : int.tryParse(jsonData['total'].toString()) ?? 0;
+        }
+
         if (jsonData is List) {
           items = jsonData;
+          if (_totalItems == 0) _totalItems = items.length;
         } else if (jsonData is Map) {
           // Try common API response keys
           if (jsonData.containsKey('data')) {
@@ -281,7 +323,8 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         // Refresh data if form was submitted successfully
                         if (result == true) {
                           setState(() {
-                            _futureItems = fetchRepairRequests();
+                            _currentPage = 1;
+                            _loadData();
                           });
                         }
                       },
@@ -503,6 +546,66 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   ),
                 );
               },
+            ),
+          ),
+
+          // ------------------------------------
+          // 4. Pagination Controls
+          // ------------------------------------
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Previous button
+                ElevatedButton.icon(
+                  onPressed: _currentPage > 1 ? _previousPage : null,
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                  label: const Text('ก่อนหน้า'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    foregroundColor: Colors.black,
+                    disabledBackgroundColor: Colors.grey[200],
+                    disabledForegroundColor: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Page info
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey[400]!),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'หน้า $_currentPage${_totalItems > 0 ? ' / $_totalPages' : ''}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Next button
+                ElevatedButton.icon(
+                  onPressed: _hasMoreData ? _nextPage : null,
+                  icon: const Icon(Icons.arrow_forward, size: 18),
+                  label: const Text('ถัดไป'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    foregroundColor: Colors.black,
+                    disabledBackgroundColor: Colors.grey[200],
+                    disabledForegroundColor: Colors.grey[400],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
