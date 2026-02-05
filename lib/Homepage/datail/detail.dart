@@ -5,6 +5,7 @@ import 'dart:convert';
 
 // Data Model for detail page
 class PurchaseItem {
+  final String id;
   final String no;
   final String type;
   final String topic;
@@ -19,6 +20,7 @@ class PurchaseItem {
   final Map<String, dynamic>? rawData;
 
   PurchaseItem({
+    required this.id,
     required this.no,
     required this.type,
     required this.topic,
@@ -79,14 +81,26 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
   Future<void> _loadFilesForItem() async {
     String? id;
-    final raw = widget.item?.rawData;
-    if (raw != null) {
-      id = raw['id']?.toString() ?? raw['repair_request_id']?.toString();
-    } else {}
+
+    // First try to get id from the item directly
+    if (widget.item?.id != null && widget.item!.id.isNotEmpty) {
+      id = widget.item!.id;
+      debugPrint('Using item.id: $id');
+    }
+
+    // Fallback to rawData
+    if (id == null) {
+      final raw = widget.item?.rawData;
+      if (raw != null) {
+        id = raw['id']?.toString() ?? raw['repair_request_id']?.toString();
+        debugPrint('Using rawData id: $id');
+      }
+    }
 
     // If no id, resolve from repair-requests list
     if (id == null) {
       id = await _resolveIdFromList();
+      debugPrint('Resolved id from list: $id');
     }
 
     if (id == null) {
@@ -94,6 +108,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       return;
     }
 
+    debugPrint('Fetching files for id: $id');
     await _fetchFilesForId(id);
   }
 
@@ -158,8 +173,15 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         List<dynamic>? list;
         if (decoded is List) {
           list = decoded;
-        } else if (decoded is Map && decoded['data'] is List) {
-          list = decoded['data'];
+        } else if (decoded is Map) {
+          // Try common API response keys
+          if (decoded['value'] is List) {
+            list = decoded['value'];
+          } else if (decoded['data'] is List) {
+            list = decoded['data'];
+          } else if (decoded['files'] is List) {
+            list = decoded['files'];
+          }
         }
 
         if (list != null) {
@@ -170,6 +192,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             } else if (item is Map) {
               bool foundUrl = false;
               final candidates = [
+                'file_url',
                 'url',
                 'path',
                 'file',
@@ -263,6 +286,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     final displayItem =
         widget.item ??
         PurchaseItem(
+          id: '',
           no: 'N/A',
           type: 'N/A',
           topic: 'ขออนุมัติซ่อมมอเตอร์ปั๊มน้ำหอพัก',

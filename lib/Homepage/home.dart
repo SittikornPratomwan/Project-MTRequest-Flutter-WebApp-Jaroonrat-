@@ -146,6 +146,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         List<PurchaseItem> purchaseItems = items.map((item) {
           print('Processing item: $item');
           return PurchaseItem(
+            id: item['id']?.toString() ?? '',
             no: item['job_no']?.toString() ?? item['id']?.toString() ?? '',
             type: item['priority']?.toString() ?? 'ปกติ',
             topic:
@@ -464,6 +465,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               _selectedItem = selected == true ? item : null;
                             });
                             if (selected == true) {
+                              print('========================================');
+                              print('Navigating to detail page');
+                              print('Selected item ID: ${item.id}');
+                              print('Selected item No: ${item.no}');
+                              print('Selected item Topic: ${item.topic}');
+                              print('========================================');
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
