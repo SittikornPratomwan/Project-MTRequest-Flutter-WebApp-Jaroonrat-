@@ -64,7 +64,9 @@ Future<Map<String, dynamic>?> showRemarkDialog(BuildContext context) {
               return Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Colors.blueGrey, width: 2),
                 ),
+                elevation: 6,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -289,7 +291,9 @@ class _RemarkPageState extends State<RemarkPage> {
             child: Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.blueGrey, width: 2),
               ),
+              elevation: 6,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(

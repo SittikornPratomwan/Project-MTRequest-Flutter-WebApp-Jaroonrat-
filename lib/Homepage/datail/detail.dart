@@ -373,11 +373,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Label: สั่งซื้อโดย
+                // Label: แจ้งซ่อมโดย
                 SizedBox(
                   width: 100,
                   child: Text(
-                    'สั่งซื้อโดย :',
+                    'แจ้งซ่อมโดย :',
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -541,40 +541,40 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _fileUrls.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, i) {
-                        final url = _fileUrls[i];
-                        return GestureDetector(
+                  // Show each attached file at its natural/intrinsic size (full width within page)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _fileUrls.map<Widget>((url) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: GestureDetector(
                           onTap: () => _showFullImage(context, url),
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              color: Colors.grey[200],
-                            ),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 240),
                             child: Image.network(
                               url,
-                              fit: BoxFit.cover,
-                              errorBuilder: (c, e, s) => const Center(
-                                child: Icon(Icons.broken_image, size: 40),
-                              ),
-                              loadingBuilder: (c, child, progress) {
+                              width: double.infinity,
+                              fit: BoxFit.contain,
+                              loadingBuilder: (context, child, progress) {
                                 if (progress == null) return child;
-                                return const Center(
-                                  child: CircularProgressIndicator(),
+                                return const SizedBox(
+                                  height: 240,
+                                  child: Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
                                 );
                               },
+                              errorBuilder: (c, e, s) => const SizedBox(
+                                height: 240,
+                                child: Center(
+                                  child: Icon(Icons.broken_image, size: 48),
+                                ),
+                              ),
                             ),
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 20),
                 ],
@@ -656,33 +656,30 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   void _showFullImage(BuildContext context, String url) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppBar(
-              title: const Text('รูปภาพ'),
-              automaticallyImplyLeading: false,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            InteractiveViewer(
-              child: Image.network(
-                url,
-                fit: BoxFit.contain,
-                errorBuilder: (c, e, s) => const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Icon(Icons.broken_image, size: 64),
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Center(
+              child: InteractiveViewer(
+                constrained: false,
+                maxScale: 5.0,
+                child: Image.network(
+                  url,
+                  // Do not force-fit; show at intrinsic size
+                  errorBuilder: (c, e, s) => const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Icon(Icons.broken_image, size: 64),
+                  ),
                 ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
