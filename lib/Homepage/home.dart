@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import './Request/request.dart';
 import './datail/detail.dart';
+import './report.dart';
 import '../Authen/authen.dart';
 
 void main() {
@@ -429,17 +430,28 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
           const Divider(thickness: 2),
 
-          // Header "MTrequest REPORT"
+          // Header "MTrequest REPORT" (tappable)
           Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 20),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                color: Colors.grey[200],
-              ),
-              child: const Text(
-                'MTrequest REPORT',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ReportPage()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 20,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  color: Colors.grey[200],
+                ),
+                child: const Text(
+                  'MTrequest REPORT',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ),
