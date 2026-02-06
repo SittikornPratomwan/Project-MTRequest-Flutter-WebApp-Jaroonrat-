@@ -199,12 +199,58 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   int selectedRadio = 0; // 0=All, 1=Finished, etc.
   List<String> _priorityOptions = ['ทั้งหมด'];
 
+  // ตัวแปรสำหรับ Search
+  String _searchBy = 'รหัส';
+  final TextEditingController _keywordController = TextEditingController();
+  String _searchKeyword = '';
+
   // ฟังก์ชันกรองข้อมูลตามความสำคัญ (ใช้ค่า priority จาก API)
   List<PurchaseItem> _filterItems(List<PurchaseItem> items) {
-    if (selectedPriority == null || selectedPriority == 'ทั้งหมด') {
-      return items;
+    List<PurchaseItem> filtered = items;
+
+    // Filter by priority
+    if (selectedPriority != null && selectedPriority != 'ทั้งหมด') {
+      filtered = filtered
+          .where((item) => item.type == selectedPriority)
+          .toList();
     }
-    return items.where((item) => item.type == selectedPriority).toList();
+
+    // Filter by search keyword
+    if (_searchKeyword.isNotEmpty) {
+      filtered = filtered.where((item) {
+        if (_searchBy == 'รหัส') {
+          // ค้นหาจาก job_no
+          return item.no.toLowerCase().contains(_searchKeyword.toLowerCase());
+        } else {
+          // ค้นหาจาก search_tsv (ในข้อมูลดิบ)
+          if (item.rawData != null && item.rawData!.containsKey('search_tsv')) {
+            final searchTsv = item.rawData!['search_tsv']?.toString() ?? '';
+            return searchTsv.toLowerCase().contains(
+              _searchKeyword.toLowerCase(),
+            );
+          }
+          // fallback: ค้นหาจาก topic
+          return item.topic.toLowerCase().contains(
+            _searchKeyword.toLowerCase(),
+          );
+        }
+      }).toList();
+    }
+
+    return filtered;
+  }
+
+  // ฟังก์ชันค้นหา
+  void _performSearch() {
+    setState(() {
+      _searchKeyword = _keywordController.text.trim();
+    });
+  }
+
+  @override
+  void dispose() {
+    _keywordController.dispose();
+    super.dispose();
   }
 
   @override
@@ -273,13 +319,17 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     SizedBox(
                       height: 35,
                       child: DropdownButton<String>(
-                        value: 'รหัส',
+                        value: _searchBy,
                         items: ['รหัส', 'ชื่อ']
                             .map(
                               (e) => DropdownMenuItem(value: e, child: Text(e)),
                             )
                             .toList(),
-                        onChanged: (_) {},
+                        onChanged: (value) {
+                          setState(() {
+                            _searchBy = value ?? 'รหัส';
+                          });
+                        },
                       ),
                     ),
                     const SizedBox(width: 15),
@@ -288,22 +338,25 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 5),
-                    const Expanded(
+                    Expanded(
                       child: SizedBox(
                         height: 35,
                         child: TextField(
-                          decoration: InputDecoration(
+                          controller: _keywordController,
+                          decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
                               horizontal: 10,
                             ),
+                            hintText: 'พิมพ์คำค้นหา...',
                           ),
+                          onSubmitted: (_) => _performSearch(),
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: _performSearch,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey[400],
                       ),

@@ -82,14 +82,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   Future<void> _loadFilesForItem() async {
     String? id;
 
-    // First try to get id from the item directly
-    if (widget.item?.id != null && widget.item!.id.isNotEmpty) {
+    // Use the ID directly from the item passed during navigation
+    if (widget.item != null && widget.item!.id.isNotEmpty) {
       id = widget.item!.id;
-      debugPrint('Using item.id: $id');
+      debugPrint('Using item.id from navigation: $id');
     }
 
-    // Fallback to rawData
-    if (id == null) {
+    // Fallback to rawData if id is empty
+    if (id == null || id.isEmpty) {
       final raw = widget.item?.rawData;
       if (raw != null) {
         id = raw['id']?.toString() ?? raw['repair_request_id']?.toString();
@@ -97,18 +97,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       }
     }
 
-    // If no id, resolve from repair-requests list
-    if (id == null) {
-      id = await _resolveIdFromList();
-      debugPrint('Resolved id from list: $id');
-    }
-
-    if (id == null) {
-      debugPrint('ERROR: Could not resolve any id!');
+    if (id == null || id.isEmpty) {
+      debugPrint('ERROR: No ID provided for fetching files!');
       return;
     }
 
-    debugPrint('Fetching files for id: $id');
+    debugPrint(
+      'Fetching files for id: $id from URL: $_baseHost/drugs/repair-requests/$id/files',
+    );
     await _fetchFilesForId(id);
   }
 
