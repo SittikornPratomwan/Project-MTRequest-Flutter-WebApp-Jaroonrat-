@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'remark.dart';
 
 // Data Model for detail page
 class PurchaseItem {
@@ -343,12 +344,22 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         elevation: 1,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Show remark dialog
-          _showRemarkDialog(context);
+        onPressed: () async {
+          // Show remark dialog without dimming background
+          final result = await showRemarkDialog(context);
+          if (result != null && mounted) {
+            final remark = result['remark'] as String? ?? '';
+            final images = result['images'] as List<Uint8List>? ?? [];
+            if (remark.isNotEmpty || images.isNotEmpty) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Remark saved')));
+              // TODO: send remark/images to API if needed
+            }
+          }
         },
         backgroundColor: Colors.green,
-        child: const Icon(Icons.note_add, color: Colors.black),
+        child: const Icon(Icons.note_add, color: Colors.grey),
         tooltip: 'Remark',
       ),
       body: SingleChildScrollView(
