@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import './Request/request.dart';
 import './datail/detail.dart';
+import '../Authen/authen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -258,6 +259,35 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Logout',
+          icon: const Icon(Icons.logout, color: Colors.black),
+          onPressed: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('ยืนยันออกจากระบบ'),
+                content: const Text('คุณต้องการออกจากระบบจริงหรือไม่?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('ยกเลิก'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('ออกจากระบบ'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (c) => const Authen()),
+                (route) => false,
+              );
+            }
+          },
+        ),
         title: const Text(
           'MT request',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
