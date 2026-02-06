@@ -273,9 +273,50 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
+  void _showRemarkDialog(BuildContext context) {
+    final TextEditingController remarkController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Add Remark'),
+          content: TextField(
+            controller: remarkController,
+            decoration: const InputDecoration(
+              hintText: 'Enter your remark...',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 5,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final remark = remarkController.text.trim();
+                if (remark.isNotEmpty) {
+                  // TODO: Save remark to API or local storage
+                  print('Remark saved: $remark');
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Remark saved')));
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Color labelColor = Colors.teal[700]!;
+    final Color labelColor = Colors.green[700]!;
     final Color valueColor = Colors.blue[900]!;
 
     // Use passed data or default data
@@ -300,6 +341,15 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Show remark dialog
+          _showRemarkDialog(context);
+        },
+        backgroundColor: Colors.green,
+        child: const Icon(Icons.note_add, color: Colors.black),
+        tooltip: 'Remark',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
