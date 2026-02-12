@@ -552,7 +552,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           ),
                         ),
                       ],
-                      rows: filteredItems.map((item) {
+                      rows: filteredItems.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        PurchaseItem item = entry.value;
                         return DataRow(
                           selected: _selectedItem == item,
                           onSelectChanged: (selected) {
@@ -576,7 +578,8 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             }
                           },
                           color: MaterialStateProperty.resolveWith<Color?>(
-                            (states) => Colors.white,
+                            (states) =>
+                                index.isEven ? Colors.white : Colors.grey[50],
                           ),
                           cells: [
                             DataCell(
