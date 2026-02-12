@@ -839,7 +839,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                         ),
                                         if (timestamp.toString().isNotEmpty)
                                           Text(
-                                            timestamp.toString(),
+                                            _formatCreatedAt(
+                                              timestamp.toString(),
+                                            ),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[600],
