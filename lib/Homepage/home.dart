@@ -260,6 +260,46 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     });
   }
 
+  // Format a datetime string to date-only (YYYY-MM-DD). If parsing fails, return original or '-'.
+  String _formatDateOnly(String raw) {
+    if (raw.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(raw);
+      final y = dt.year.toString().padLeft(4, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      final d = dt.day.toString().padLeft(2, '0');
+      return '$d/$m/$y';
+    } catch (_) {
+      // Fallback: try to handle common date string formats like
+      // YYYY-MM-DD or YYYY/MM/DD or DD-MM-YYYY etc., and convert to DD/MM/YYYY
+      String part = raw;
+      if (raw.contains(' ')) part = raw.split(' ').first;
+      if (part.contains('-')) {
+        final seg = part.split('-');
+        if (seg.length >= 3) {
+          // If first segment looks like year (4 chars) assume YYYY-MM-DD
+          if (seg[0].length == 4) {
+            return '${seg[2].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[0]}';
+          } else {
+            // Assume already DD-MM-YYYY -> convert separators
+            return '${seg[0].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[2]}';
+          }
+        }
+      }
+      if (part.contains('/')) {
+        final seg = part.split('/');
+        if (seg.length >= 3) {
+          if (seg[0].length == 4) {
+            return '${seg[2].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[0]}';
+          } else {
+            return '${seg[0].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[2]}';
+          }
+        }
+      }
+      return raw;
+    }
+  }
+
   @override
   void dispose() {
     _keywordController.dispose();
@@ -307,6 +347,18 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         backgroundColor: Colors.grey[300],
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'รีเฟรช',
+            icon: const Icon(Icons.refresh, color: Colors.black),
+            onPressed: () {
+              setState(() {
+                _currentPage = 1;
+                _loadData(0);
+              });
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -534,7 +586,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         ),
                         DataColumn(
                           label: Text(
-                            '---',
+                            'วันที่ร้องขอ',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -619,7 +671,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               ),
                             ),
                             DataCell(Text(item.reqDate)),
-                            DataCell(Text(item.prDate)),
+                            DataCell(Text(_formatDateOnly(item.createdAt))),
                             DataCell(Text(item.reqBy)),
                             DataCell(
                               Text(
