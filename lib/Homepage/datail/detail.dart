@@ -75,10 +75,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   String? _currentFetchId;
   String? _currentFetchUri;
 
+  List<dynamic> _comments = [];
+  bool _loadingComments = false;
+
   @override
   void initState() {
     super.initState();
     _loadFilesForItem();
+    _loadCommentsForItem();
   }
 
   Future<void> _loadFilesForItem() async {
@@ -108,6 +112,35 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       'Fetching files for id: $id from URL: $_baseHost/drugs/repair-requests/$id/files',
     );
     await _fetchFilesForId(id);
+  }
+
+  Future<void> _loadCommentsForItem() async {
+    String? id;
+
+    // Use the ID directly from the item passed during navigation
+    if (widget.item != null && widget.item!.id.isNotEmpty) {
+      id = widget.item!.id;
+      debugPrint('Using item.id from navigation (comments): $id');
+    }
+
+    // Fallback to rawData if id is empty
+    if (id == null || id.isEmpty) {
+      final raw = widget.item?.rawData;
+      if (raw != null) {
+        id = raw['id']?.toString() ?? raw['repair_request_id']?.toString();
+        debugPrint('Using rawData id (comments): $id');
+      }
+    }
+
+    if (id == null || id.isEmpty) {
+      debugPrint('ERROR: No ID provided for fetching comments!');
+      return;
+    }
+
+    debugPrint(
+      'Fetching comments for id: $id from URL: $_baseHost/drugs/repair-requests/$id/comments',
+    );
+    await _fetchCommentsForId(id);
   }
 
   Future<String?> _resolveIdFromList() async {
@@ -222,6 +255,46 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     } catch (e) {
     } finally {
       if (mounted) setState(() => _loadingFiles = false);
+    }
+  }
+
+  Future<void> _fetchCommentsForId(String id) async {
+    final uri = Uri.parse('$_baseHost/drugs/repair-requests/$id/comments');
+    setState(() {
+      _loadingComments = true;
+    });
+    try {
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      debugPrint('Comments API response status: ${resp.statusCode}');
+      debugPrint('Comments API response body: ${resp.body}');
+
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        List<dynamic> commentList = [];
+
+        // Handle different response formats
+        if (decoded is List) {
+          commentList = decoded;
+        } else if (decoded is Map) {
+          if (decoded['comments'] is List) {
+            commentList = decoded['comments'];
+          } else if (decoded['data'] is List) {
+            commentList = decoded['data'];
+          } else if (decoded['value'] is List) {
+            commentList = decoded['value'];
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _comments = commentList;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching comments: $e');
+    } finally {
+      if (mounted) setState(() => _loadingComments = false);
     }
   }
 
@@ -592,6 +665,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ),
               ),
 
+            // (ความเห็น ย้ายไว้ด้านล่างสุด)
+
             // -------------------------------------------------------
             // 3. Approval Table Section (ตารางอนุมัติ)
             // -------------------------------------------------------
@@ -649,6 +724,134 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ),
               ],
             ),
+
+            // -------------------------------------------------------
+            // Comments Section (ย้ายมาไว้ด้านล่างสุด)
+            // -------------------------------------------------------
+            const SizedBox(height: 20),
+            if (_loadingComments)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            if (!_loadingComments && _comments.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ความเห็น/หมายเหตุ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: labelColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _comments.length,
+                      separatorBuilder: (_, __) =>
+                          Divider(height: 1, color: Colors.grey[300]),
+                      itemBuilder: (context, index) {
+                        final comment = _comments[index];
+                        final username =
+                            comment['user_name'] ??
+                            comment['username'] ??
+                            comment['user'] ??
+                            'Unknown';
+                        final text =
+                            comment['comment'] ??
+                            comment['text'] ??
+                            comment['message'] ??
+                            '';
+                        final timestamp =
+                            comment['created_at'] ??
+                            comment['createdAt'] ??
+                            comment['date'] ??
+                            '';
+                        final userId = comment['user_id'] ?? comment['userId'];
+
+                        return Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[200],
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        username.toString()[0].toUpperCase(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          username.toString(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        if (timestamp.toString().isNotEmpty)
+                                          Text(
+                                            timestamp.toString(),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                text.toString(),
+                                style: TextStyle(
+                                  color: valueColor,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            if (!_loadingComments && _comments.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(
+                  'ไม่มีความเห็น/หมายเหตุ',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ),
 
             const SizedBox(height: 30),
           ],
