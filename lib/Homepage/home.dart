@@ -595,19 +595,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       columns: const [
                         DataColumn(
                           label: Text(
-                            'No.',
+                            'หมายเลข',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'Type',
+                            'ประเภท',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'Topic',
+                            'หัวข้อ',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -625,25 +625,25 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         ),
                         DataColumn(
                           label: Text(
-                            'Req.By',
+                            'ผู้ร้องขอ',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'Dept',
+                            'แผนก',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'Status',
+                            'สถานะ',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'Finish',
+                            'ดูรายละเอียด',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
