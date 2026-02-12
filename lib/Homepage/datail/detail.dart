@@ -342,9 +342,32 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       final d = dt.day.toString().padLeft(2, '0');
       final hh = dt.hour.toString().padLeft(2, '0');
       final mm = dt.minute.toString().padLeft(2, '0');
-      return '$y-$m-$d $hh:$mm';
+      return '$d/$m/$y $hh:$mm';
     } catch (_) {
-      return raw; // fallback: show original string
+      // Fallback: try extracting and reformatting common date patterns
+      String part = raw;
+      if (raw.contains(' ')) part = raw.split(' ').first;
+      if (part.contains('-')) {
+        final seg = part.split('-');
+        if (seg.length >= 3) {
+          if (seg[0].length == 4) {
+            return '${seg[2].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[0]}';
+          } else {
+            return '${seg[0].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[2]}';
+          }
+        }
+      }
+      if (part.contains('/')) {
+        final seg = part.split('/');
+        if (seg.length >= 3) {
+          if (seg[0].length == 4) {
+            return '${seg[2].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[0]}';
+          } else {
+            return '${seg[0].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[2]}';
+          }
+        }
+      }
+      return raw;
     }
   }
 
