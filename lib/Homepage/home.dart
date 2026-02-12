@@ -44,7 +44,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
   // Pagination variables
   int _currentPage = 1;
-  final int _limit = 15;
+  int _limit = 15;
   int _totalItems = 0;
   bool _hasMoreData = true;
 
@@ -57,8 +57,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     _loadData();
   }
 
-  void _loadData() {
-    _futureItems = fetchRepairRequests(_limit, _offset);
+  void _loadData([int? offsetOverride]) {
+    final offset = offsetOverride ?? _offset;
+    _futureItems = fetchRepairRequests(_limit, offset);
     _futureItems.then((items) {
       setState(() {
         final set = <String>{};
@@ -68,6 +69,16 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         _priorityOptions = ['ทั้งหมด', ...set.toList()];
         _hasMoreData = items.length >= _limit;
       });
+    });
+  }
+
+  void _changeLimit(int newLimit) {
+    if (newLimit == _limit) return;
+    setState(() {
+      _limit = newLimit;
+      _currentPage = 1;
+      // When changing page size, fetch from offset=0 per requirement
+      _loadData(0);
     });
   }
 
@@ -666,6 +677,42 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Page size selector
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'แสดง: ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey[400]!),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: DropdownButton<int>(
+                        value: _limit,
+                        underline: const SizedBox.shrink(),
+                        items: [10, 15, 20, 25, 30].map((e) {
+                          return DropdownMenuItem<int>(
+                            value: e,
+                            child: Text(e.toString()),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          if (v != null) _changeLimit(v);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                ),
+
+                // Pagination controls
+
                 // Previous button
                 ElevatedButton.icon(
                   onPressed: _currentPage > 1 ? _previousPage : null,
