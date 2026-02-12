@@ -381,23 +381,56 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       'Priority : ',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
+                    const SizedBox(width: 6),
                     SizedBox(
                       height: 35,
                       child: DropdownButton<String>(
                         value: selectedPriority,
-                        items: _priorityOptions.map((String value) {
+                        items: _priorityOptions.map((e) {
                           return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
+                            value: e,
+                            child: Text(e),
                           );
                         }).toList(),
                         onChanged: (v) => setState(() => selectedPriority = v),
                       ),
                     ),
-                    _buildRadioOption(0, 'งานคงค้างทั้งหมด'),
-                    _buildRadioOption(1, 'งานที่จบแล้ว'),
-                    _buildRadioOption(2, 'งานค้างเปิด PO'),
-                    _buildRadioOption(3, 'งานรออนุมัติ'),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'สถานะ : ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          height: 35,
+                          child: DropdownButton<int>(
+                            value: selectedRadio,
+                            items: [
+                              DropdownMenuItem(
+                                value: 0,
+                                child: Text('งานคงค้างทั้งหมด'),
+                              ),
+                              DropdownMenuItem(
+                                value: 1,
+                                child: Text('งานที่จบแล้ว'),
+                              ),
+                              DropdownMenuItem(
+                                value: 2,
+                                child: Text('งานค้างเปิด PO'),
+                              ),
+                              DropdownMenuItem(
+                                value: 3,
+                                child: Text('งานรออนุมัติ'),
+                              ),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => selectedRadio = v ?? 0),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -512,7 +545,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   color: Colors.grey[200],
                 ),
                 child: const Text(
-                  'MTrequest REPORT',
+                  'MTRequest REPORT',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ),
