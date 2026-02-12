@@ -98,7 +98,7 @@ class _AuthenState extends State<Authen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(60),
                       child: Image.asset(
-                        'images/icon.png',
+                        'Images/logojaroonrat.png',
                         fit: BoxFit.cover,
                         width: 120,
                         height: 120,
@@ -116,7 +116,7 @@ class _AuthenState extends State<Authen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'ระบบช่างซ่อม MT man',
+                    'ระบบแจ้งซ่อม Jaroonrat',
                     style: TextStyle(
                       fontSize: 16,
                       color: isDark ? Colors.white70 : Colors.black54,

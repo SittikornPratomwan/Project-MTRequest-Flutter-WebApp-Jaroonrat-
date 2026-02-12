@@ -613,13 +613,13 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         ),
                         DataColumn(
                           label: Text(
-                            'วันต้องการ',
+                            'วันที่ร้องขอ',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'วันที่ร้องขอ',
+                            'วันต้องการ',
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -703,8 +703,8 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                               ),
                             ),
-                            DataCell(Text(item.reqDate)),
                             DataCell(Text(_formatDateOnly(item.createdAt))),
+                            DataCell(Text(item.reqDate)),
                             DataCell(Text(item.reqBy)),
                             DataCell(
                               Text(
