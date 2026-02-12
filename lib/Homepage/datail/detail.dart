@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:typed_data';
 import 'remark.dart';
 
 // Data Model for detail page
@@ -346,7 +347,10 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           // Show remark dialog without dimming background
-          final result = await showRemarkDialog(context);
+          final result = await showRemarkDialog(
+            context,
+            repairRequestId: displayItem.id,
+          );
           if (result != null && mounted) {
             final remark = result['remark'] as String? ?? '';
             final images = result['images'] as List<Uint8List>? ?? [];

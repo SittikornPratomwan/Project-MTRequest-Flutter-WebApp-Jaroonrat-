@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class RemarkPage extends StatefulWidget {
   const RemarkPage({super.key});
@@ -12,11 +14,38 @@ class RemarkPage extends StatefulWidget {
 }
 
 // Helper to show the remark UI as a popup dialog without darkening the background.
-Future<Map<String, dynamic>?> showRemarkDialog(BuildContext context) {
+Future<Map<String, dynamic>?> showRemarkDialog(
+  BuildContext context, {
+  String? repairRequestId,
+}) {
   final TextEditingController controller = TextEditingController();
   final ImagePicker picker = ImagePicker();
   final List<Uint8List> images = [];
   const int maxImages = 5;
+
+  Future<void> submitComment(String comment) async {
+    if (comment.isEmpty || repairRequestId == null) return;
+
+    try {
+      final uri = Uri.parse(
+        'http://26.99.205.41:9000/drugs/repair-requests/$repairRequestId/comments',
+      );
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'user_id': 2, 'comment': comment}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (kDebugMode) {
+        debugPrint('Submit comment response: ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error submitting comment: $e');
+    }
+  }
 
   return showDialog<Map<String, dynamic>>(
     context: context,
@@ -203,11 +232,14 @@ Future<Map<String, dynamic>?> showRemarkDialog(BuildContext context) {
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(ctx).pop({
-                                'remark': controller.text.trim(),
-                                'images': images,
-                              });
+                            onPressed: () async {
+                              final comment = controller.text.trim();
+                              if (comment.isNotEmpty) {
+                                await submitComment(comment);
+                              }
+                              Navigator.of(
+                                ctx,
+                              ).pop({'remark': comment, 'images': images});
                             },
                             child: const Text('Save'),
                           ),
