@@ -19,8 +19,26 @@ class MyApp extends StatelessWidget {
       title: 'Purchase Report',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        // แนะนำให้ใช้ GoogleFonts.sarabun() หรือ kanit() ในงานจริงเพื่อให้ฟอนต์สวยงาม
+        primaryColor: const Color(0xFF1976D2),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
         fontFamily: 'Sans-serif',
+        textTheme: TextTheme(
+          headlineSmall: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A202C),
+          ),
+          labelLarge: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF2D3748),
+          ),
+          bodyMedium: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF4A5568),
+          ),
+        ),
       ),
       home: const PurchaseReportPage(),
     );
@@ -309,11 +327,13 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
         leading: IconButton(
           tooltip: 'Logout',
-          icon: const Icon(Icons.logout, color: Colors.black),
+          icon: const Icon(Icons.logout, color: Colors.white),
           onPressed: () async {
             final confirmed = await showDialog<bool>(
               context: context,
@@ -342,15 +362,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         ),
         title: const Text(
           'MT request',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            letterSpacing: 0.5,
+          ),
         ),
-        backgroundColor: Colors.grey[300],
-        elevation: 0,
+        backgroundColor: const Color(0xFF1976D2),
         centerTitle: true,
         actions: [
           IconButton(
             tooltip: 'รีเฟรช',
-            icon: const Icon(Icons.refresh, color: Colors.black),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () {
               setState(() {
                 _currentPage = 1;
@@ -367,7 +391,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           // ------------------------------------
           Container(
             padding: const EdgeInsets.all(16.0),
-            color: Colors.grey[100],
+            color: Colors.white,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -379,17 +403,34 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   children: [
                     const Text(
                       'Priority : ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D3748),
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(width: 6),
-                    SizedBox(
-                      height: 35,
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.white,
+                      ),
                       child: DropdownButton<String>(
                         value: selectedPriority,
+                        underline: const SizedBox.shrink(),
                         items: _priorityOptions.map((e) {
                           return DropdownMenuItem<String>(
                             value: e,
-                            child: Text(e),
+                            child: Text(
+                              e,
+                              style: const TextStyle(
+                                color: Color(0xFF2D3748),
+                                fontSize: 14,
+                              ),
+                            ),
                           );
                         }).toList(),
                         onChanged: (v) => setState(() => selectedPriority = v),
@@ -400,29 +441,64 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       children: [
                         const Text(
                           'สถานะ : ',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF2D3748),
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(width: 6),
-                        SizedBox(
-                          height: 35,
+                        Container(
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            borderRadius: BorderRadius.circular(6),
+                            color: Colors.white,
+                          ),
                           child: DropdownButton<int>(
                             value: selectedRadio,
+                            underline: const SizedBox.shrink(),
                             items: [
                               DropdownMenuItem(
                                 value: 0,
-                                child: Text('งานคงค้างทั้งหมด'),
+                                child: Text(
+                                  'งานคงค้างทั้งหมด',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D3748),
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 1,
-                                child: Text('งานที่จบแล้ว'),
+                                child: Text(
+                                  'งานที่จบแล้ว',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D3748),
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 2,
-                                child: Text('งานค้างเปิด PO'),
+                                child: Text(
+                                  'งานค้างเปิด PO',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D3748),
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ),
                               DropdownMenuItem(
                                 value: 3,
-                                child: Text('งานรออนุมัติ'),
+                                child: Text(
+                                  'งานรออนุมัติ',
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D3748),
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ),
                             ],
                             onChanged: (v) =>
@@ -440,16 +516,36 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   children: [
                     const Text(
                       'Search By : ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D3748),
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(width: 5),
-                    SizedBox(
-                      height: 35,
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.white,
+                      ),
                       child: DropdownButton<String>(
                         value: _searchBy,
+                        underline: const SizedBox.shrink(),
                         items: ['รหัส', 'ชื่อ']
                             .map(
-                              (e) => DropdownMenuItem(value: e, child: Text(e)),
+                              (e) => DropdownMenuItem(
+                                value: e,
+                                child: Text(
+                                  e,
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D3748),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
                             )
                             .toList(),
                         onChanged: (value) {
@@ -462,20 +558,51 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     const SizedBox(width: 15),
                     const Text(
                       'Keyword : ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D3748),
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
                       child: SizedBox(
-                        height: 35,
+                        height: 36,
                         child: TextField(
                           controller: _keywordController,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 10,
+                          style: const TextStyle(
+                            color: Color(0xFF2D3748),
+                            fontSize: 14,
+                          ),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(6),
+                              borderSide: const BorderSide(
+                                color: Color(0xFF1976D2),
+                                width: 2,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
                             ),
                             hintText: 'พิมพ์คำค้นหา...',
+                            hintStyle: const TextStyle(
+                              color: Color(0xFFCBD5E0),
+                              fontSize: 14,
+                            ),
                           ),
                           onSubmitted: (_) => _performSearch(),
                         ),
@@ -485,15 +612,27 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     ElevatedButton(
                       onPressed: _performSearch,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[400],
+                        backgroundColor: const Color(0xFF1976D2),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                       child: const Text(
                         'ค้นหาข้อมูล',
-                        style: TextStyle(color: Colors.black),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: () async {
                         final result = await Navigator.push(
                           context,
@@ -509,13 +648,18 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           });
                         }
                       },
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('แจ้งซ่อมใหม่'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        side: const BorderSide(color: Colors.grey),
-                      ),
-                      child: const Text(
-                        'แจ้งซ่อมใหม่',
-                        style: TextStyle(color: Colors.black),
+                        backgroundColor: const Color(0xFF48BB78),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                     ),
                   ],
@@ -524,7 +668,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
             ),
           ),
 
-          const Divider(thickness: 2),
+          const Divider(thickness: 1),
 
           // Header "MTrequest REPORT" (tappable)
           Center(
@@ -537,29 +681,38 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 20,
+                  vertical: 10,
+                  horizontal: 24,
                 ),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  color: Colors.grey[200],
+                  border: Border.all(color: const Color(0xFF1976D2), width: 2),
+                  color: const Color(0xFF1976D2).withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
                   'MTRequest REPORT',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Color(0xFF1976D2),
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
             ),
           ),
-
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8.0),
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'REMARK : สามารถคลิกเพื่อดูไฟล์ PO ได้ที่ (PO:......) ใต้ Status',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                'หมายเหตุ: คลิกแถวข้อมูลเพื่อดูรายละเอียด หรือคลิก (PO:......) เพื่อดูไฟล์',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF718096),
+                ),
               ),
             ),
           ),
@@ -588,63 +741,108 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     child: DataTable(
                       showCheckboxColumn: false,
                       headingRowColor: MaterialStateProperty.all(
-                        Colors.grey[400],
+                        const Color(0xFF1976D2).withOpacity(0.1),
                       ),
-                      columnSpacing: 20,
-                      border: TableBorder.all(color: Colors.grey[300]!),
+                      columnSpacing: 16,
+                      border: TableBorder(
+                        horizontalInside: BorderSide(
+                          color: Colors.grey[200]!,
+                          width: 1,
+                        ),
+                        bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+                        top: BorderSide(color: Colors.grey[200]!, width: 1),
+                        left: BorderSide(color: Colors.grey[200]!, width: 1),
+                        right: BorderSide(color: Colors.grey[200]!, width: 1),
+                      ),
                       columns: const [
                         DataColumn(
                           label: Text(
                             'หมายเลข',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'ประเภท',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'หัวข้อ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'วันที่ร้องขอ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'วันต้องการ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'ผู้ร้องขอ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'แผนก',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'สถานะ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
                             'ดูรายละเอียด',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -674,14 +872,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             }
                           },
                           color: MaterialStateProperty.resolveWith<Color?>(
-                            (states) =>
-                                index.isEven ? Colors.white : Colors.grey[50],
+                            (states) => index.isEven
+                                ? Colors.white
+                                : const Color(0xFFF7FAFC),
                           ),
                           cells: [
                             DataCell(
                               Text(
                                 item.no,
-                                style: const TextStyle(color: Colors.brown),
+                                style: const TextStyle(
+                                  color: Color(0xFF2D3748),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                             DataCell(
@@ -689,8 +892,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 item.type,
                                 style: TextStyle(
                                   color: item.type == 'ด่วน'
-                                      ? Colors.red
-                                      : Colors.black,
+                                      ? const Color(0xFFE53E3E)
+                                      : const Color(0xFF4A5568),
+                                  fontWeight: item.type == 'ด่วน'
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -700,18 +907,47 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 child: Text(
                                   item.topic,
                                   overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Color(0xFF2D3748),
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ),
-                            DataCell(Text(_formatDateOnly(item.createdAt))),
-                            DataCell(Text(item.reqDate)),
-                            DataCell(Text(item.reqBy)),
+                            DataCell(
+                              Text(
+                                _formatDateOnly(item.createdAt),
+                                style: const TextStyle(
+                                  color: Color(0xFF4A5568),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                item.reqDate,
+                                style: const TextStyle(
+                                  color: Color(0xFF4A5568),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                item.reqBy,
+                                style: const TextStyle(
+                                  color: Color(0xFF4A5568),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
                             DataCell(
                               Text(
                                 item.dept,
                                 style: const TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF38A169),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
                                 ),
                               ),
                             ),
@@ -724,21 +960,29 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                     item.status,
                                     style: TextStyle(
                                       color: item.status == 'อนุมัติ'
-                                          ? Colors.green
-                                          : Colors.orange[800],
-                                      fontWeight: FontWeight.bold,
+                                          ? const Color(0xFF38A169)
+                                          : const Color(0xFFD69E2E),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
                                     ),
                                   ),
                                   if (item.approver.isNotEmpty)
                                     Text(
                                       item.approver,
-                                      style: const TextStyle(fontSize: 11),
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF718096),
+                                      ),
                                     ),
                                 ],
                               ),
                             ),
                             const DataCell(
-                              Icon(Icons.edit, color: Colors.orange, size: 20),
+                              Icon(
+                                Icons.edit,
+                                color: Color(0xFF1976D2),
+                                size: 18,
+                              ),
                             ),
                           ],
                         );
@@ -756,8 +1000,10 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
-              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(color: Colors.grey[200]!, width: 1),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -768,23 +1014,37 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   children: [
                     const Text(
                       'แสดง: ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF2D3748),
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: Colors.grey[400]!),
-                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(5),
                       ),
                       child: DropdownButton<int>(
                         value: _limit,
+                        isDense: true,
                         underline: const SizedBox.shrink(),
                         items: [10, 15, 20, 25, 30].map((e) {
                           return DropdownMenuItem<int>(
                             value: e,
-                            child: Text(e.toString()),
+                            child: Text(
+                              e.toString(),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF2D3748),
+                              ),
+                            ),
                           );
                         }).toList(),
                         onChanged: (v) {
@@ -792,54 +1052,78 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                   ],
                 ),
-
-                // Pagination controls
 
                 // Previous button
                 ElevatedButton.icon(
                   onPressed: _currentPage > 1 ? _previousPage : null,
-                  icon: const Icon(Icons.arrow_back, size: 18),
-                  label: const Text('ก่อนหน้า'),
+                  icon: const Icon(Icons.arrow_back, size: 16),
+                  label: const Text(
+                    'ก่อนหน้า',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    foregroundColor: Colors.black,
-                    disabledBackgroundColor: Colors.grey[200],
-                    disabledForegroundColor: Colors.grey[400],
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    minimumSize: const Size(36, 36),
+                    backgroundColor: const Color(0xFF1976D2),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFFCBD5E0),
+                    disabledForegroundColor: const Color(0xFF718096),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
 
-                // Page info
+                // Page info (compact)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                    horizontal: 14,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border.all(color: Colors.grey[400]!),
-                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(5),
                   ),
                   child: Text(
                     'หน้า $_currentPage${_totalItems > 0 ? ' / $_totalPages' : ''}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF2D3748),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
 
                 // Next button
                 ElevatedButton.icon(
                   onPressed: _hasMoreData ? _nextPage : null,
-                  icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('ถัดไป'),
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: const Text(
+                    'ถัดไป',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
-                    foregroundColor: Colors.black,
-                    disabledBackgroundColor: Colors.grey[200],
-                    disabledForegroundColor: Colors.grey[400],
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    minimumSize: const Size(36, 36),
+                    backgroundColor: const Color(0xFF1976D2),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFFCBD5E0),
+                    disabledForegroundColor: const Color(0xFF718096),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5),
+                    ),
                   ),
                 ),
               ],
@@ -858,10 +1142,18 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         Radio<int>(
           value: value,
           groupValue: selectedRadio,
+          activeColor: const Color(0xFF1976D2),
           onChanged: (int? v) => setState(() => selectedRadio = v!),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         ),
-        Text(label, style: const TextStyle(fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Color(0xFF2D3748),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }

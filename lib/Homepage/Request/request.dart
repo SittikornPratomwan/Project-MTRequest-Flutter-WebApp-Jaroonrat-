@@ -18,9 +18,26 @@ class MyApp extends StatelessWidget {
       title: 'Purchase Request Form',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: const Color(0xFFF5F5DC), // สีครีมตามภาพ
-        fontFamily:
-            'Sans-serif', // ควรใช้ฟอนต์ Sarabun หรือ Kanit ในโปรเจกต์จริง
+        primaryColor: const Color(0xFF1976D2),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
+        fontFamily: 'Sans-serif',
+        textTheme: TextTheme(
+          headlineSmall: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A202C),
+          ),
+          labelLarge: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF2D3748),
+          ),
+          bodyMedium: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF4A5568),
+          ),
+        ),
       ),
       home: const RequestFormPage(),
     );
@@ -295,8 +312,18 @@ class _RequestFormPageState extends State<RequestFormPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Request'),
-        backgroundColor: Colors.grey[400],
+        title: const Text(
+          'New Request',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -314,7 +341,11 @@ class _RequestFormPageState extends State<RequestFormPage> {
                   width: 100,
                   child: Text(
                     'Priority :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2D3748),
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -352,21 +383,28 @@ class _RequestFormPageState extends State<RequestFormPage> {
                   width: 100,
                   child: Text(
                     'Request :',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2D3748),
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 Text(
                   _formatThaiDate(_requestDate),
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3748),
                   ),
                 ),
                 const SizedBox(width: 5),
                 const Text(
                   '(วันที่ร้องขอ)',
-                  style: TextStyle(color: Colors.blue),
+                  style: TextStyle(
+                    color: Color(0xFF1976D2),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -552,16 +590,27 @@ class _RequestFormPageState extends State<RequestFormPage> {
           child: Radio<String>(
             value: value,
             groupValue: _priority,
+            activeColor: const Color(0xFF1976D2),
             onChanged: (v) => setState(() => _priority = v),
           ),
         ),
         const SizedBox(width: 5),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.normal)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF2D3748),
+          ),
+        ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             note,
-            style: TextStyle(color: noteColor, fontSize: 12),
+            style: TextStyle(
+              color: noteColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -583,18 +632,40 @@ class _RequestFormPageState extends State<RequestFormPage> {
           width: 100,
           child: Text(
             label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2D3748),
+              fontSize: 14,
+            ),
           ),
         ),
         Expanded(
           child: SizedBox(
-            height: 35,
+            height: 36,
             child: TextFormField(
               initialValue: initialValue,
               controller: controller,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 10),
+              style: const TextStyle(color: Color(0xFF2D3748), fontSize: 14),
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF1976D2),
+                    width: 2,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 fillColor: Colors.white,
                 filled: true,
               ),

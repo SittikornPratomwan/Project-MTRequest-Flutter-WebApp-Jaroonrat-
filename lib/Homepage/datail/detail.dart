@@ -51,8 +51,26 @@ class MyApp extends StatelessWidget {
       title: 'MT request Detail',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.white,
+        primaryColor: const Color(0xFF1976D2),
+        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
         fontFamily: 'Sans-serif',
+        textTheme: TextTheme(
+          headlineSmall: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1A202C),
+          ),
+          labelLarge: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF2D3748),
+          ),
+          bodyMedium: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Color(0xFF4A5568),
+          ),
+        ),
       ),
       home: const PurchaseDetailPage(),
     );
@@ -414,8 +432,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color labelColor = Colors.green[700]!;
-    final Color valueColor = Colors.blue[900]!;
+    final Color labelColor = const Color(0xFF1976D2);
+    final Color valueColor = const Color(0xFF2D3748);
 
     // Use passed data or default data
     final displayItem =
@@ -435,10 +453,18 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MT request Detail'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
+        title: const Text(
+          'MT request Detail',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shadowColor: Colors.black.withOpacity(0.1),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -458,9 +484,10 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             }
           }
         },
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF48BB78),
+        foregroundColor: Colors.white,
         child: const Icon(Icons.note_add, color: Colors.white),
-        tooltip: 'Remark',
+        tooltip: 'Add Remark',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
