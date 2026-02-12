@@ -359,7 +359,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           }
         },
         backgroundColor: Colors.green,
-        child: const Icon(Icons.note_add, color: Colors.grey),
+        child: const Icon(Icons.note_add, color: Colors.white),
         tooltip: 'Remark',
       ),
       body: SingleChildScrollView(
