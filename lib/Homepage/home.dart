@@ -701,22 +701,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'หมายเหตุ: คลิกแถวข้อมูลเพื่อดูรายละเอียด หรือคลิก (PO:......) เพื่อดูไฟล์',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF718096),
-                ),
-              ),
-            ),
-          ),
-
           // ------------------------------------
           // 3. Data Table Section (ตาราง)
           // ------------------------------------
@@ -743,7 +727,8 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       headingRowColor: MaterialStateProperty.all(
                         const Color(0xFF1976D2).withOpacity(0.1),
                       ),
-                      columnSpacing: 16,
+                      columnSpacing: 20,
+                      dataRowHeight: 60,
                       border: TableBorder(
                         horizontalInside: BorderSide(
                           color: Colors.grey[200]!,
@@ -761,7 +746,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -771,7 +756,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -781,7 +766,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -791,7 +776,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -801,7 +786,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -811,7 +796,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -821,7 +806,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -831,17 +816,17 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
                         DataColumn(
                           label: Text(
-                            'ดูรายละเอียด',
+                            'จบงาน',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 13,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -878,110 +863,150 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           ),
                           cells: [
                             DataCell(
-                              Text(
-                                item.no,
-                                style: const TextStyle(
-                                  color: Color(0xFF2D3748),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
                                 ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                item.type,
-                                style: TextStyle(
-                                  color: item.type == 'ด่วน'
-                                      ? const Color(0xFFE53E3E)
-                                      : const Color(0xFF4A5568),
-                                  fontWeight: item.type == 'ด่วน'
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              SizedBox(
-                                width: 200,
                                 child: Text(
-                                  item.topic,
-                                  overflow: TextOverflow.ellipsis,
+                                  item.no,
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
-                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
                                   ),
                                 ),
                               ),
                             ),
                             DataCell(
-                              Text(
-                                _formatDateOnly(item.createdAt),
-                                style: const TextStyle(
-                                  color: Color(0xFF4A5568),
-                                  fontSize: 13,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Text(
+                                  item.type,
+                                  style: TextStyle(
+                                    color: item.type == 'ด่วน'
+                                        ? const Color(0xFFE53E3E)
+                                        : const Color(0xFF4A5568),
+                                    fontWeight: item.type == 'ด่วน'
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    fontSize: 15,
+                                  ),
                                 ),
                               ),
                             ),
                             DataCell(
-                              Text(
-                                item.reqDate,
-                                style: const TextStyle(
-                                  color: Color(0xFF4A5568),
-                                  fontSize: 13,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
                                 ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                item.reqBy,
-                                style: const TextStyle(
-                                  color: Color(0xFF4A5568),
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Text(
-                                item.dept,
-                                style: const TextStyle(
-                                  color: Color(0xFF38A169),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.status,
-                                    style: TextStyle(
-                                      color: item.status == 'อนุมัติ'
-                                          ? const Color(0xFF38A169)
-                                          : const Color(0xFFD69E2E),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
+                                child: SizedBox(
+                                  width: 200,
+                                  child: Text(
+                                    item.topic,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFF2D3748),
+                                      fontSize: 15,
                                     ),
                                   ),
-                                  if (item.approver.isNotEmpty)
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Text(
+                                  _formatDateOnly(item.createdAt),
+                                  style: const TextStyle(
+                                    color: Color(0xFF4A5568),
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Text(
+                                  item.reqDate,
+                                  style: const TextStyle(
+                                    color: Color(0xFF4A5568),
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Text(
+                                  item.reqBy,
+                                  style: const TextStyle(
+                                    color: Color(0xFF4A5568),
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Text(
+                                  item.dept,
+                                  style: const TextStyle(
+                                    color: Color(0xFF38A169),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      item.approver,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF718096),
+                                      item.status,
+                                      style: TextStyle(
+                                        color: item.status == 'อนุมัติ'
+                                            ? const Color(0xFF38A169)
+                                            : const Color(0xFFD69E2E),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
                                       ),
                                     ),
-                                ],
+                                    if (item.approver.isNotEmpty)
+                                      Text(
+                                        item.approver,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          color: Color(0xFF718096),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                             const DataCell(
                               Icon(
                                 Icons.edit,
                                 color: Color(0xFF1976D2),
-                                size: 18,
+                                size: 20,
                               ),
                             ),
                           ],
