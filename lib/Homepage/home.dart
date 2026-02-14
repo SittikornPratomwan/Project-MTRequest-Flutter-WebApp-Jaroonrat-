@@ -119,6 +119,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     _goToPage(_currentPage - 1);
   }
 
+  // ฟังก์ชันแปล priority จากภาษาอังกฤษเป็นไทย
+  String _translatePriority(String priority) {
+    final map = {'normal': 'ปกติ', 'urgent': 'เร่งรีบ', 'project': 'กำหนดเอง'};
+    return map[priority.toLowerCase()] ?? priority;
+  }
+
   // ฟังก์ชันเรียก API
   Future<List<PurchaseItem>> fetchRepairRequests(int limit, int offset) async {
     try {
@@ -179,7 +185,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           return PurchaseItem(
             id: item['id']?.toString() ?? '',
             no: item['job_no']?.toString() ?? item['id']?.toString() ?? '',
-            type: item['priority']?.toString() ?? 'ปกติ',
+            type: _translatePriority(item['priority']?.toString() ?? 'normal'),
             topic:
                 item['title']?.toString() ??
                 item['description']?.toString() ??
@@ -433,7 +439,11 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (v) => setState(() => selectedPriority = v),
+                        onChanged: (v) => setState(() {
+                          selectedPriority = v;
+                          _searchKeyword = '';
+                          _keywordController.clear();
+                        }),
                       ),
                     ),
                     Row(
@@ -501,8 +511,11 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                               ),
                             ],
-                            onChanged: (v) =>
-                                setState(() => selectedRadio = v ?? 0),
+                            onChanged: (v) => setState(() {
+                              selectedRadio = v ?? 0;
+                              _searchKeyword = '';
+                              _keywordController.clear();
+                            }),
                           ),
                         ),
                       ],
@@ -551,6 +564,8 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         onChanged: (value) {
                           setState(() {
                             _searchBy = value ?? 'รหัส';
+                            _searchKeyword = '';
+                            _keywordController.clear();
                           });
                         },
                       ),
@@ -885,10 +900,17 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 child: Text(
                                   item.type,
                                   style: TextStyle(
-                                    color: item.type == 'ด่วน'
+                                    color: item.type == 'เร่งรีบ'
                                         ? const Color(0xFFE53E3E)
+                                        : item.type == 'ปกติ'
+                                        ? const Color(0xFF38A169)
+                                        : item.type == 'กำหนดเอง'
+                                        ? const Color(0xFFD69E2E)
                                         : const Color(0xFF4A5568),
-                                    fontWeight: item.type == 'ด่วน'
+                                    fontWeight:
+                                        item.type == 'เร่งรีบ' ||
+                                            item.type == 'ปกติ' ||
+                                            item.type == 'กำหนดเอง'
                                         ? FontWeight.w600
                                         : FontWeight.w500,
                                     fontSize: 15,
