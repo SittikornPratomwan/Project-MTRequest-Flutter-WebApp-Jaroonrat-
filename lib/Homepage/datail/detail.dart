@@ -480,7 +480,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(const SnackBar(content: Text('Remark saved')));
-              // TODO: send remark/images to API if needed
+              // Refresh comments
+              await _loadCommentsForItem();
             }
           }
         },
