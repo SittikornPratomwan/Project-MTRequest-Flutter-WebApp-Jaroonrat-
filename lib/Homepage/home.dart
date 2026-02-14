@@ -402,7 +402,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const Text(
-                      'Priority : ',
+                      'ประเภท : ',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2D3748),
@@ -515,7 +515,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 Row(
                   children: [
                     const Text(
-                      'Search By : ',
+                      'ค้นหาจาก : ',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2D3748),
@@ -557,7 +557,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     ),
                     const SizedBox(width: 15),
                     const Text(
-                      'Keyword : ',
+                      'คำที่ค้นหา : ',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2D3748),

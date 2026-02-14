@@ -579,7 +579,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ),
                 if (displayItem.no.isNotEmpty)
                   _buildTableRow(
-                    'MT No :',
+                    'หมายเลขเอกสาร :',
                     displayItem.no,
                     labelColor,
                     valueColor,
