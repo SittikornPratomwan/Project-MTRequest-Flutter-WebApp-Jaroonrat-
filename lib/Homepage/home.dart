@@ -742,8 +742,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       headingRowColor: MaterialStateProperty.all(
                         const Color(0xFF1976D2).withOpacity(0.1),
                       ),
-                      columnSpacing: 20,
-                      dataRowHeight: 60,
+                      columnSpacing: 28,
+                      headingRowHeight: 56,
+                      dataRowHeight: 76,
                       border: TableBorder(
                         horizontalInside: BorderSide(
                           color: Colors.grey[200]!,
@@ -761,7 +762,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -771,7 +772,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -781,7 +782,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -791,7 +792,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -801,7 +802,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -811,7 +812,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -821,7 +822,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -831,7 +832,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -841,7 +842,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -887,7 +888,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 15,
+                                    fontSize: 16,
                                   ),
                                 ),
                               ),
@@ -930,7 +931,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: Color(0xFF2D3748),
-                                      fontSize: 15,
+                                      fontSize: 16,
                                     ),
                                   ),
                                 ),
@@ -945,7 +946,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   _formatDateOnly(item.createdAt),
                                   style: const TextStyle(
                                     color: Color(0xFF4A5568),
-                                    fontSize: 15,
+                                    fontSize: 16,
                                   ),
                                 ),
                               ),
@@ -959,7 +960,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   item.reqDate,
                                   style: const TextStyle(
                                     color: Color(0xFF4A5568),
-                                    fontSize: 15,
+                                    fontSize: 16,
                                   ),
                                 ),
                               ),
@@ -973,7 +974,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   item.reqBy,
                                   style: const TextStyle(
                                     color: Color(0xFF4A5568),
-                                    fontSize: 15,
+                                    fontSize: 16,
                                   ),
                                 ),
                               ),
@@ -988,7 +989,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   style: const TextStyle(
                                     color: Color(0xFF38A169),
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 15,
+                                    fontSize: 16,
                                   ),
                                 ),
                               ),
@@ -1009,7 +1010,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                             ? const Color(0xFF38A169)
                                             : const Color(0xFFD69E2E),
                                         fontWeight: FontWeight.w700,
-                                        fontSize: 15,
+                                        fontSize: 16,
                                       ),
                                     ),
                                     if (item.approver.isNotEmpty)
@@ -1028,7 +1029,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               Icon(
                                 Icons.edit,
                                 color: Color(0xFF1976D2),
-                                size: 20,
+                                size: 24,
                               ),
                             ),
                           ],
