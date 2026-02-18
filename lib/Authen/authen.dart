@@ -9,6 +9,9 @@ import '../Service/theme_provider.dart';
 class Authen extends StatefulWidget {
   const Authen({super.key});
 
+  // Stored auth token after successful login (nullable)
+  static String? token;
+
   @override
   State<Authen> createState() => _AuthenState();
 }
@@ -334,6 +337,26 @@ class _AuthenState extends State<Authen> {
           final data = jsonDecode(response.body);
           if (data is Map && data['message'] != null) {
             message = data['message'].toString();
+          }
+
+          // Try to extract token from common fields
+          String? extractedToken;
+          if (data is Map) {
+            if (data['token'] != null)
+              extractedToken = data['token'].toString();
+            else if (data['access_token'] != null)
+              extractedToken = data['access_token'].toString();
+            else if (data['data'] is Map && data['data']['token'] != null) {
+              extractedToken = data['data']['token'].toString();
+            } else if (data['result'] is Map &&
+                data['result']['token'] != null) {
+              extractedToken = data['result']['token'].toString();
+            }
+          }
+
+          if (extractedToken != null && extractedToken.isNotEmpty) {
+            Authen.token = extractedToken;
+            debugPrint('Saved auth token: ${Authen.token}');
           }
         } catch (_) {}
 

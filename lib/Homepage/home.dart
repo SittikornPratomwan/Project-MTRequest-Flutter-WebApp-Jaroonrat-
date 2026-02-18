@@ -132,7 +132,16 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       final uri = Uri.parse(
         'http://26.99.205.41:9000/drugs/repair-requests?limit=$limit&offset=$offset',
       );
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      // Attach Authorization header when token exists
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (Authen.token != null && Authen.token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer ${Authen.token}';
+        print('Using auth token in request headers');
+      }
+
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
 
       print('Response status: ${response.statusCode}');
       print('Response body: ${response.body}');
