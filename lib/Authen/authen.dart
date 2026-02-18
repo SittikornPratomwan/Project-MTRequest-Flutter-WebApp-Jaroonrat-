@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import '../Homepage/home.dart';
 import '../Service/theme_provider.dart';
 
@@ -294,11 +298,14 @@ class _AuthenState extends State<Authen> {
   }
 
   Future<void> handleLogin() async {
-    if (usernameController.text.isEmpty) {
+    final username = usernameController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (username.isEmpty) {
       showSnackbar('กรุณากรอก ชื่อผู้ใช้', backgroundColor: Colors.red);
       return;
     }
-    if (passwordController.text.isEmpty) {
+    if (password.isEmpty) {
       showSnackbar('กรุณากรอก รหัสผ่าน', backgroundColor: Colors.red);
       return;
     }
@@ -308,28 +315,55 @@ class _AuthenState extends State<Authen> {
       isLoading = true;
     });
 
-    // Simulate loading delay
-    await Future.delayed(const Duration(milliseconds: 1500));
+    final baseUrl = 'http://26.99.205.41:9000/drugs';
+    final url = Uri.parse('$baseUrl/mtrequest/login');
+    final body = jsonEncode({'username': username, 'password': password});
 
-    // Allow login with any valid username/password
-    if (usernameController.text.isNotEmpty &&
-        passwordController.text.isNotEmpty) {
-      print('Login Success');
-      showSnackbar('เข้าสู่ระบบสำเร็จ', backgroundColor: Colors.green);
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const PurchaseReportPage()),
-        );
+    try {
+      final response = await http
+          .post(url, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 10));
+
+      // Debug: log status and body
+      debugPrint('Login response status: ${response.statusCode}');
+      debugPrint('Login response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        String message = 'เข้าสู่ระบบสำเร็จ';
+        try {
+          final data = jsonDecode(response.body);
+          if (data is Map && data['message'] != null) {
+            message = data['message'].toString();
+          }
+        } catch (_) {}
+
+        showSnackbar(message, backgroundColor: Colors.green);
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const PurchaseReportPage()),
+          );
+        }
+      } else {
+        String error = 'เข้าสู่ระบบไม่สำเร็จ (${response.statusCode})';
+        try {
+          final data = jsonDecode(response.body);
+          if (data is Map && data['error'] != null) {
+            error = data['error'].toString();
+          }
+        } catch (_) {}
+        showSnackbar(error, backgroundColor: Colors.red);
       }
-    } else {
-      showSnackbar('เข้าสู่ระบบไม่สำเร็จ', backgroundColor: Colors.red);
+    } catch (e) {
+      showSnackbar('ข้อผิดพลาด: $e', backgroundColor: Colors.red);
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
-
-    setState(() {
-      isLoading = false;
-    });
   }
 
   void showSnackbar(String message, {Color backgroundColor = Colors.blue}) {
