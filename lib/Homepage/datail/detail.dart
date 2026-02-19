@@ -132,7 +132,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   }
 
   Future<void> _fetchApproversForId(String id) async {
-    final uri = Uri.parse('$_baseHost/repair-requests/$id/approvers');
+    // Use the approval-steps endpoint per request
+    final uri = Uri.parse('$_baseHost/repair-requests/$id/approval-steps');
     setState(() {
       _loadingApprovers = true;
     });
@@ -140,21 +141,40 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       final resp = await http
           .get(uri, headers: _authHeaders())
           .timeout(const Duration(seconds: 10));
+      debugPrint('Approval-steps API response status: ${resp.statusCode}');
+      debugPrint('Approval-steps API response body: ${resp.body}');
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body);
         List<dynamic> list = [];
         if (decoded is List) {
           list = decoded;
         } else if (decoded is Map) {
-          if (decoded['approvers'] is List) {
-            list = decoded['approvers'];
+          // Try common API response keys
+          if (decoded['approval_steps'] is List) {
+            list = decoded['approval_steps'];
+          } else if (decoded['approvalSteps'] is List) {
+            list = decoded['approvalSteps'];
+          } else if (decoded['steps'] is List) {
+            // Extract approvers from all steps
+            final steps = decoded['steps'] as List;
+            for (final step in steps) {
+              if (step is Map && step['approvers'] is List) {
+                list.addAll(step['approvers']);
+              }
+            }
           } else if (decoded['data'] is List) {
             list = decoded['data'];
           } else if (decoded['value'] is List) {
             list = decoded['value'];
           }
         }
+        debugPrint('Parsed approval steps: $list');
         if (mounted) setState(() => _approvers = list);
+        // Debug: log each approver's extracted username
+        for (int i = 0; i < list.length; i++) {
+          final extracted = _extractUsername(list[i]);
+          debugPrint('Approver[$i] username: $extracted | raw: ${list[i]}');
+        }
       }
     } catch (e) {
       debugPrint('Error fetching approvers: $e');
@@ -609,6 +629,46 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     return null;
   }
 
+  // Robustly extract a username string from an approver object
+  String _extractUsername(dynamic approver) {
+    if (approver == null) return 'ไม่มีข้อมูล';
+    // direct keys
+    final candidates = [
+      'username',
+      'user_name',
+      'name',
+      'display_name',
+      'approver_name',
+      'user',
+      'requester',
+    ];
+
+    if (approver is String) return approver;
+    if (approver is Map) {
+      for (final k in candidates) {
+        if (approver[k] != null) {
+          final v = approver[k];
+          if (v is String && v.isNotEmpty) return v;
+          if (v is Map && v['username'] != null)
+            return v['username'].toString();
+        }
+      }
+      // check nested common containers
+      for (final nk in ['user', 'approver', 'account', 'person']) {
+        if (approver[nk] is Map) {
+          final m = approver[nk] as Map;
+          if (m['username'] != null) return m['username'].toString();
+          if (m['name'] != null) return m['name'].toString();
+        }
+      }
+      // last resort: try first string value
+      for (final v in approver.values) {
+        if (v is String && v.isNotEmpty) return v;
+      }
+    }
+    return 'ไม่มีข้อมูล';
+  }
+
   String _formatCreatedAt(String raw) {
     if (raw.isEmpty) return '-';
     try {
@@ -1046,6 +1106,23 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             ),
             const SizedBox(height: 5),
 
+            // Status line showing loaded approvers count
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                _loadingApprovers
+                    ? 'กำลังโหลดผู้อนุมัติ...'
+                    : _approvers.isEmpty
+                    ? 'ไม่พบผู้อนุมัติ'
+                    : 'พบผู้อนุมัติ ${_approvers.length} คน: ${_approvers.map((a) => _extractUsername(a)).join(", ")}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _approvers.isEmpty ? Colors.red : Colors.green[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
             Table(
               border: TableBorder.all(color: Colors.grey[600]!),
               columnWidths: const {
@@ -1096,12 +1173,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   ..._approvers.asMap().entries.map((e) {
                     final idx = e.key;
                     final approver = e.value;
-                    final username =
-                        (approver['username'] ??
-                                approver['user_name'] ??
-                                approver['name'] ??
-                                'ไม่มีข้อมูล')
-                            .toString();
+                    final username = _extractUsername(approver).toString();
                     final status =
                         (approver['status'] ?? approver['approved'] ?? '')
                             .toString();
