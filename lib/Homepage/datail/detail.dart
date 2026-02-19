@@ -1320,6 +1320,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                         ),
                                     ],
                                   )
+                                : isApproved
+                                ? const SizedBox()
                                 : ElevatedButton(
                                     onPressed: () => _rejectApproverAt(idx),
                                     style: ElevatedButton.styleFrom(
