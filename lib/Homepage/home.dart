@@ -59,6 +59,8 @@ class PurchaseReportPage extends StatefulWidget {
 class _PurchaseReportPageState extends State<PurchaseReportPage> {
   late Future<List<PurchaseItem>> _futureItems;
   PurchaseItem? _selectedItem;
+  bool _showPendingApproval = false; // Flag to show pending approval items
+  int _pendingApprovalCount = 0; // Count of pending approval items
 
   // Pagination variables
   int _currentPage = 1;
@@ -86,6 +88,26 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         }
         _priorityOptions = ['ทั้งหมด', ...set.toList()];
         _hasMoreData = items.length >= _limit;
+      });
+    });
+  }
+
+  // Load and show pending-approval items (reset filters and update count)
+  void _showPendingApprovalItems() {
+    setState(() {
+      _showPendingApproval = true;
+      _currentPage = 1;
+      selectedPriority = 'ทั้งหมด';
+      _searchKeyword = '';
+      _keywordController.clear();
+    });
+
+    _futureItems = fetchPendingApprovalRequests();
+    _futureItems.then((items) {
+      setState(() {
+        _pendingApprovalCount = items.length;
+        // Pending-approval list is typically not paginated by this UI
+        _hasMoreData = false;
       });
     });
   }
@@ -259,6 +281,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           );
         }).toList();
         print('Successfully loaded ${purchaseItems.length} items');
+        // Update pending count only when the caller expects pending items,
+        // but keep this here so count is available if needed.
+        _pendingApprovalCount = purchaseItems.length;
         return purchaseItems;
       } else {
         throw Exception(
@@ -268,6 +293,146 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     } catch (e) {
       print('Error fetching data: $e');
       // Return empty list or default data on error
+      return [];
+    }
+  }
+
+  // ฟังก์ชันเรียก API สำหรับรายการที่รอการอนุมัติ
+  Future<List<PurchaseItem>> fetchPendingApprovalRequests() async {
+    try {
+      // ตรวจสอบว่ามี user_id หรือไม่
+      if (Authen.requesterId == null) {
+        print('Error: requesterId is null');
+        throw Exception('User ID not found. Please login again.');
+      }
+
+      print(
+        'Fetching pending approval data... (user_id: ${Authen.requesterId})',
+      );
+      final uri = Uri.parse(
+        'http://26.99.205.41:9000/drugs/repair-requests/pending-approval/by-user?user_id=${Authen.requesterId}',
+      );
+
+      // Attach Authorization header when token exists
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (Authen.token != null && Authen.token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer ${Authen.token}';
+        print('Using auth token in request headers');
+      }
+
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        print('Decoded JSON: $jsonData');
+
+        // Handle different response formats
+        List<dynamic> items = [];
+
+        if (jsonData is List) {
+          items = jsonData;
+          _totalItems = items.length;
+        } else if (jsonData is Map) {
+          // Try common API response keys
+          if (jsonData.containsKey('data')) {
+            items = jsonData['data'] is List
+                ? jsonData['data']
+                : [jsonData['data']];
+          } else if (jsonData.containsKey('results')) {
+            items = jsonData['results'] is List
+                ? jsonData['results']
+                : [jsonData['results']];
+          } else if (jsonData.containsKey('items')) {
+            items = jsonData['items'] is List
+                ? jsonData['items']
+                : [jsonData['items']];
+          } else if (jsonData.containsKey('repair_requests')) {
+            items = jsonData['repair_requests'] is List
+                ? jsonData['repair_requests']
+                : [jsonData['repair_requests']];
+          } else if (jsonData.containsKey('total')) {
+            _totalItems = jsonData['total'] is int
+                ? jsonData['total']
+                : int.tryParse(jsonData['total'].toString()) ?? 0;
+            items = [];
+          } else {
+            // If no data key, treat the entire object as single item
+            items = [jsonData];
+            _totalItems = 1;
+          }
+        }
+
+        print('Total items found: ${items.length}');
+
+        List<PurchaseItem> purchaseItems = items.map((item) {
+          print('Processing pending approval item: $item');
+          return PurchaseItem(
+            id: item['id']?.toString() ?? '',
+            no: item['job_no']?.toString() ?? item['id']?.toString() ?? '',
+            type: _translatePriority(item['priority']?.toString() ?? 'normal'),
+            topic:
+                item['title']?.toString() ??
+                item['description']?.toString() ??
+                '',
+            reqDate: _getReqDate(
+              item['current_phase'],
+              item['due_date'],
+              item['request_date'],
+              item['created_date'],
+            ),
+            prDate:
+                item['pr_date']?.toString() ??
+                item['po_date']?.toString() ??
+                '-',
+            reqBy:
+                item['username']?.toString() ??
+                item['requested_by']?.toString() ??
+                item['requester']?.toString() ??
+                '',
+            dept:
+                item['department_name']?.toString() ??
+                item['department']?.toString() ??
+                '',
+            status:
+                'รอการอนุมัติ', // Pending approval items are always waiting for approval
+            approver:
+                item['approver']?.toString() ??
+                item['approved_by']?.toString() ??
+                '',
+            createdAt:
+                item['created_at']?.toString() ??
+                item['created_date']?.toString() ??
+                item['createdAt']?.toString() ??
+                '',
+            isHighlight: true,
+            rawData: item is Map ? Map<String, dynamic>.from(item) : null,
+          );
+        }).toList();
+        print(
+          'Successfully loaded ${purchaseItems.length} pending approval items',
+        );
+        return purchaseItems;
+      } else {
+        throw Exception(
+          'Failed to load pending approval requests: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('Error fetching pending approval data: $e');
+      // Show error message to user
+      _pendingApprovalCount = 0;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
       return [];
     }
   }
@@ -284,6 +449,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
   // ฟังก์ชันกรองข้อมูลตามความสำคัญ (ใช้ค่า priority จาก API)
   List<PurchaseItem> _filterItems(List<PurchaseItem> items) {
+    // If showing pending approval items, don't apply additional filters
+    // as the API already filtered them
+    if (_showPendingApproval) {
+      return items;
+    }
+
     List<PurchaseItem> filtered = items;
 
     // Filter by priority
@@ -578,64 +749,66 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 ),
                 const SizedBox(height: 10),
 
-                // Row 2: Search Inputs & Buttons
-                Row(
-                  children: [
-                    const Text(
-                      'ค้นหาจาก : ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2D3748),
-                        fontSize: 14,
+                // Row 2: Search Inputs & Buttons (with scroll)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      const Text(
+                        'ค้นหาจาก : ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D3748),
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                        borderRadius: BorderRadius.circular(6),
-                        color: Colors.white,
-                      ),
-                      child: DropdownButton<String>(
-                        value: _searchBy,
-                        underline: const SizedBox.shrink(),
-                        items: ['รหัส', 'ชื่อ']
-                            .map(
-                              (e) => DropdownMenuItem(
-                                value: e,
-                                child: Text(
-                                  e,
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D3748),
-                                    fontSize: 14,
+                      const SizedBox(width: 5),
+                      Container(
+                        height: 36,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(6),
+                          color: Colors.white,
+                        ),
+                        child: DropdownButton<String>(
+                          value: _searchBy,
+                          underline: const SizedBox.shrink(),
+                          items: ['รหัส', 'ชื่อ']
+                              .map(
+                                (e) => DropdownMenuItem(
+                                  value: e,
+                                  child: Text(
+                                    e,
+                                    style: const TextStyle(
+                                      color: Color(0xFF2D3748),
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _searchBy = value ?? 'รหัส';
-                            _searchKeyword = '';
-                            _keywordController.clear();
-                          });
-                        },
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _searchBy = value ?? 'รหัส';
+                              _searchKeyword = '';
+                              _keywordController.clear();
+                            });
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 15),
-                    const Text(
-                      'คำที่ค้นหา : ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2D3748),
-                        fontSize: 14,
+                      const SizedBox(width: 15),
+                      const Text(
+                        'คำที่ค้นหา : ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D3748),
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: SizedBox(
+                      const SizedBox(width: 5),
+                      SizedBox(
+                        width: 200,
                         height: 36,
                         child: TextField(
                           controller: _keywordController,
@@ -676,62 +849,107 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           onSubmitted: (_) => _performSearch(),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: _performSearch,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1976D2),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: const Text(
-                        'ค้นหาข้อมูล',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RequestFormPage(),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        onPressed: _performSearch,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1976D2),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                        );
-                        // Refresh data if form was submitted successfully
-                        if (result == true) {
-                          setState(() {
-                            _currentPage = 1;
-                            _loadData();
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('แจ้งซ่อมใหม่'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF48BB78),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
+                        child: const Text(
+                          'ค้นหาข้อมูล',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _showPendingApproval = false;
+                            _currentPage = 1;
+                            _loadData(0);
+                            selectedPriority = 'ทั้งหมด';
+                            _searchKeyword = '';
+                            _keywordController.clear();
+                          });
+                        },
+                        icon: const Icon(Icons.list, size: 18),
+                        label: const Text('ทั้งหมด'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4299E1),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        onPressed: _showPendingApprovalItems,
+                        icon: const Icon(Icons.pending_actions, size: 18),
+                        label: Text(
+                          'รายการที่รอคุณอนุมัติ${_pendingApprovalCount > 0 ? ' ($_pendingApprovalCount)' : ''}',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFED8936),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RequestFormPage(),
+                            ),
+                          );
+                          // Refresh data if form was submitted successfully
+                          if (result == true) {
+                            setState(() {
+                              _currentPage = 1;
+                              _loadData();
+                            });
+                          }
+                        },
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('แจ้งซ่อมใหม่'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF48BB78),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
