@@ -349,6 +349,36 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
   Future<void> _rejectApproverAt(int idx) async {
     final approver = _approvers[idx];
+    // approver user id in the list (could be 'id' or 'user_id' depending on API)
+    final approverUserIdRaw =
+        (approver['id'] ??
+        approver['user_id'] ??
+        approver['approver_id'] ??
+        approver['approverId']);
+    if (approverUserIdRaw == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสผู้อนุมัติ')));
+      return;
+    }
+
+    final approverUserId = approverUserIdRaw.toString();
+    final loggedUserId = Authen.requesterId;
+    if (loggedUserId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณาล็อกอินก่อนทำรายการ')));
+      return;
+    }
+
+    // If logged in user id does not match approver id for this row, deny permission
+    if (approverUserId != loggedUserId.toString()) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('คุณไม่มีสิทอนุมัตินี้')));
+      return;
+    }
+    // Use approver-specific approvers/{approverId} endpoint (PATCH) to reject.
     final approverId =
         (approver['id'] ??
                 approver['approver_id'] ??
