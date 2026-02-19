@@ -155,11 +155,18 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           } else if (decoded['approvalSteps'] is List) {
             list = decoded['approvalSteps'];
           } else if (decoded['steps'] is List) {
-            // Extract approvers from all steps
+            // Extract approvers from all steps and attach step state to each approver
             final steps = decoded['steps'] as List;
             for (final step in steps) {
               if (step is Map && step['approvers'] is List) {
-                list.addAll(step['approvers']);
+                final stepState = step['state']?.toString() ?? '';
+                for (final approver in step['approvers']) {
+                  if (approver is Map) {
+                    // Add step_state to each approver so we know which step they belong to
+                    approver['step_state'] = stepState;
+                  }
+                  list.add(approver);
+                }
               }
             }
           } else if (decoded['data'] is List) {
@@ -1205,7 +1212,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                     final approver = e.value;
                     final username = _extractUsername(approver).toString();
                     final status =
-                        (approver['status'] ?? approver['approved'] ?? '')
+                        (approver['status'] ??
+                                approver['step_state'] ??
+                                approver['state'] ??
+                                approver['approved'] ??
+                                '')
                             .toString();
                     final at =
                         (approver['approved_at'] ??
@@ -1214,6 +1225,18 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                 approver['created_at'] ??
                                 '')
                             .toString();
+                    final isApproved =
+                        status.toString().toLowerCase().contains('approved') ||
+                        approver['approved'] == true ||
+                        (approver['step_state'] != null &&
+                            approver['step_state'].toString().toLowerCase() ==
+                                'approved');
+                    final isRejected =
+                        status.toString().toLowerCase().contains('rejected') ||
+                        approver['approved'] == false ||
+                        (approver['step_state'] != null &&
+                            approver['step_state'].toString().toLowerCase() ==
+                                'rejected');
 
                     return TableRow(
                       children: [
@@ -1236,15 +1259,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         Padding(
                           padding: const EdgeInsets.all(6.0),
                           child: Center(
-                            child:
-                                status.toString().toLowerCase().contains(
-                                      'approved',
-                                    ) ||
-                                    approver['approved'] == true
+                            child: isApproved
                                 ? Column(
                                     children: [
                                       const Text(
-                                        'อนุมัติ',
+                                        'อนุมัติแล้ว',
                                         style: TextStyle(
                                           color: Colors.blue,
                                           fontWeight: FontWeight.bold,
@@ -1281,11 +1300,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         Padding(
                           padding: const EdgeInsets.all(6.0),
                           child: Center(
-                            child:
-                                status.toString().toLowerCase().contains(
-                                      'rejected',
-                                    ) ||
-                                    approver['approved'] == false
+                            child: isRejected
                                 ? Column(
                                     children: [
                                       const Text(
