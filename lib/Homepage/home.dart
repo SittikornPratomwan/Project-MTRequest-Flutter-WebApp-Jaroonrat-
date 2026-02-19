@@ -208,10 +208,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 item['po_date']?.toString() ??
                 '-',
             reqBy:
+                item['username']?.toString() ??
                 item['requested_by']?.toString() ??
                 item['requester']?.toString() ??
                 '',
-            dept: item['department']?.toString() ?? '',
+            dept:
+                item['department_name']?.toString() ??
+                item['department']?.toString() ??
+                '',
             status: item['status']?.toString() ?? 'รออนุมัติ',
             approver:
                 item['approver']?.toString() ??
