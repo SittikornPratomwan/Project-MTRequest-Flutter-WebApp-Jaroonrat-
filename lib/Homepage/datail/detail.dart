@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
 import 'remark.dart';
+import '../../Authen/authen.dart';
 
 // Data Model for detail page
 class PurchaseItem {
@@ -87,7 +88,7 @@ class PurchaseDetailPage extends StatefulWidget {
 }
 
 class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
-  final String _baseHost = 'http://26.99.205.41:9000';
+  final String _baseHost = 'http://26.99.205.41:9000/drugs';
   List<String> _fileUrls = [];
   bool _loadingFiles = false;
   String? _currentFetchId;
@@ -131,12 +132,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   }
 
   Future<void> _fetchApproversForId(String id) async {
-    final uri = Uri.parse('$_baseHost/drugs/repair-requests/$id/approvers');
+    final uri = Uri.parse('$_baseHost/repair-requests/$id/approvers');
     setState(() {
       _loadingApprovers = true;
     });
     try {
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(uri, headers: _authHeaders())
+          .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body);
         List<dynamic> list = [];
@@ -169,33 +172,102 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       debugPrint('No repairRequestId available for approver action');
       return;
     }
-    final uri = Uri.parse(
-      '$_baseHost/drugs/repair-requests/$_currentRepairRequestId/approvers/$approverId',
+    final Map<String, dynamic> bodyMap = {'approved': approve};
+    if (Authen.requesterId != null) bodyMap['user_id'] = Authen.requesterId;
+    // Primary endpoint requested by backend: POST /drugs/repair-requests/{id}/approve
+    final primaryApproveUri = Uri.parse(
+      '$_baseHost/repair-requests/$_currentRepairRequestId/approve',
     );
+    final approversUri = Uri.parse(
+      '$_baseHost/repair-requests/$_currentRepairRequestId/approvers/$approverId',
+    );
+    final altApproveUri = Uri.parse(
+      '$_baseHost/repair-requests/$_currentRepairRequestId/approvers/$approverId/approve',
+    );
+    final bodyWithApprover = Map<String, dynamic>.from(bodyMap);
+    bodyWithApprover['approver_id'] = approverId;
+    final bodyPrimary = jsonEncode(bodyWithApprover);
+    final body = jsonEncode(bodyMap);
+    final headers = _authHeaders(json: true);
+
+    Future<bool> _handleSuccess() async {
+      if (!mounted) return false;
+      setState(() {
+        final now = DateTime.now().toIso8601String();
+        _approvers[idx]['approved'] = approve;
+        _approvers[idx]['approved_at'] = now;
+        _approvers[idx]['status'] = approve ? 'approved' : 'rejected';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(approve ? 'อนุมัติสำเร็จ' : 'ไม่อนุมัติสำเร็จ')),
+      );
+      return true;
+    }
+
     try {
-      final body = jsonEncode({'approved': approve});
-      final resp = await http
-          .patch(uri, headers: {'Content-Type': 'application/json'}, body: body)
-          .timeout(const Duration(seconds: 10));
-      debugPrint('Approver action response: ${resp.statusCode} ${resp.body}');
-      // Optimistic update: mark locally if success
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        if (!mounted) return;
-        setState(() {
-          final now = DateTime.now().toIso8601String();
-          _approvers[idx]['approved'] = approve;
-          _approvers[idx]['approved_at'] = now;
-          _approvers[idx]['status'] = approve ? 'approved' : 'rejected';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(approve ? 'อนุมัติสำเร็จ' : 'ไม่อนุมัติสำเร็จ'),
-          ),
+      // 1) Try PATCH to /repair-requests/{id}/approve (primary requested)
+      try {
+        debugPrint('Primary PATCH /approve URI: $primaryApproveUri');
+        debugPrint('Primary PATCH /approve headers: $headers');
+        debugPrint('Primary PATCH /approve body: $bodyPrimary');
+        final pResp = await http
+            .patch(primaryApproveUri, headers: headers, body: bodyPrimary)
+            .timeout(const Duration(seconds: 10));
+        debugPrint(
+          'Primary PATCH /approve response: ${pResp.statusCode} ${pResp.body}',
         );
-      } else {
-        // still try to show feedback
+        if (pResp.statusCode == 200 ||
+            pResp.statusCode == 201 ||
+            pResp.statusCode == 204) {
+          await _handleSuccess();
+          return;
+        }
+      } catch (e) {
+        debugPrint('Primary PATCH /approve error: $e');
+      }
+
+      // 2) Try PATCH to approvers/{approverId}
+      try {
+        final resp = await http
+            .patch(approversUri, headers: headers, body: body)
+            .timeout(const Duration(seconds: 10));
+        debugPrint('Approvers PATCH response: ${resp.statusCode} ${resp.body}');
+        if (resp.statusCode == 200 ||
+            resp.statusCode == 201 ||
+            resp.statusCode == 204) {
+          await _handleSuccess();
+          return;
+        }
+
+        // If server replies 404 or method not allowed, try POST to approvers/{id}/approve
+        if (resp.statusCode == 404 || resp.statusCode == 405) {
+          try {
+            final r2 = await http
+                .post(altApproveUri, headers: headers, body: body)
+                .timeout(const Duration(seconds: 10));
+            debugPrint(
+              'Alt POST approvers/{id}/approve response: ${r2.statusCode} ${r2.body}',
+            );
+            if (r2.statusCode == 200 ||
+                r2.statusCode == 201 ||
+                r2.statusCode == 204) {
+              await _handleSuccess();
+              return;
+            }
+          } catch (e) {
+            debugPrint('Alt POST approvers/{id}/approve error: $e');
+          }
+        }
+      } catch (e) {
+        debugPrint('Approvers PATCH error: $e');
+      }
+
+      // If we reach here, no endpoint succeeded
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('การอัปเดตสถานะล้มเหลว (${resp.statusCode})')),
+          const SnackBar(
+            content: Text('การอัปเดตสถานะล้มเหลว (ไม่สามารถติดต่อ API ได้)'),
+          ),
         );
       }
     } catch (e) {
@@ -209,6 +281,36 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
   Future<void> _approveApproverAt(int idx) async {
     final approver = _approvers[idx];
+    // approver user id in the list (could be 'id' or 'user_id' depending on API)
+    final approverUserIdRaw =
+        (approver['id'] ??
+        approver['user_id'] ??
+        approver['approver_id'] ??
+        approver['approverId']);
+    if (approverUserIdRaw == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสผู้อนุมัติ')));
+      return;
+    }
+
+    final approverUserId = approverUserIdRaw.toString();
+    final loggedUserId = Authen.requesterId;
+    if (loggedUserId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณาล็อกอินก่อนทำรายการ')));
+      return;
+    }
+
+    // If logged in user id does not match approver id for this row, deny permission
+    if (approverUserId != loggedUserId.toString()) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('คุณไม่มีสิทอนุมัตินี้')));
+      return;
+    }
+    // Use approver-specific approvers/{approverId} endpoint (PATCH) to approve.
     final approverId =
         (approver['id'] ??
                 approver['approver_id'] ??
@@ -221,6 +323,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสผู้อนุมัติ')));
       return;
     }
+
     await _sendApproverAction(idx, approverId, true);
   }
 
@@ -301,8 +404,10 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
   Future<String?> _resolveIdFromList() async {
     try {
-      final uri = Uri.parse('$_baseHost/drugs/repair-requests');
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      final uri = Uri.parse('$_baseHost/repair-requests');
+      final resp = await http
+          .get(uri, headers: _authHeaders())
+          .timeout(const Duration(seconds: 10));
       if (resp.statusCode != 200) {
         return null;
       }
@@ -345,14 +450,16 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   }
 
   Future<void> _fetchFilesForId(String id) async {
-    final uri = Uri.parse('$_baseHost/drugs/repair-requests/$id/files');
+    final uri = Uri.parse('$_baseHost/repair-requests/$id/files');
     setState(() {
       _loadingFiles = true;
       _currentFetchId = id;
       _currentFetchUri = uri.toString();
     });
     try {
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(uri, headers: _authHeaders())
+          .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body);
         final List<String> urls = [];
@@ -415,12 +522,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   }
 
   Future<void> _fetchCommentsForId(String id) async {
-    final uri = Uri.parse('$_baseHost/drugs/repair-requests/$id/comments');
+    final uri = Uri.parse('$_baseHost/repair-requests/$id/comments');
     setState(() {
       _loadingComments = true;
     });
     try {
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(uri, headers: _authHeaders())
+          .timeout(const Duration(seconds: 10));
       debugPrint('Comments API response status: ${resp.statusCode}');
       debugPrint('Comments API response body: ${resp.body}');
 
@@ -458,6 +567,16 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     if (raw.startsWith('http')) return raw;
     if (raw.startsWith('/')) return '$_baseHost$raw';
     return '$_baseHost/$raw';
+  }
+
+  // Build headers including Authorization token when available
+  Map<String, String> _authHeaders({bool json = false}) {
+    final headers = <String, String>{};
+    if (json) headers['Content-Type'] = 'application/json';
+    if (Authen.token != null && Authen.token!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${Authen.token}';
+    }
+    return headers;
   }
 
   // Recursively search a Map/List for a string that looks like an image/file path
