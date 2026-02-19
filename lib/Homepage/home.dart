@@ -527,7 +527,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               DropdownMenuItem(
                                 value: 0,
                                 child: Text(
-                                  'งานคงค้างทั้งหมด',
+                                  'ทั้งหมด',
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 14,
@@ -537,7 +537,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               DropdownMenuItem(
                                 value: 1,
                                 child: Text(
-                                  'งานที่จบแล้ว',
+                                  'รอการอนุมัติ',
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 14,
@@ -547,7 +547,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               DropdownMenuItem(
                                 value: 2,
                                 child: Text(
-                                  'งานค้างเปิด PO',
+                                  'กำลังดำเนินการ',
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 14,
@@ -557,7 +557,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               DropdownMenuItem(
                                 value: 3,
                                 child: Text(
-                                  'งานรออนุมัติ',
+                                  'งานที่จบแล้ว',
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 14,
