@@ -495,6 +495,15 @@ class _AuthenState extends State<Authen> {
             Authen.loginUsername = username;
             debugPrint('Saved loginUsername: ${Authen.loginUsername}');
           }
+          // Debug: print extracted/saved auth info and full parsed response
+          debugPrint(
+            'Login saved values: token=${Authen.token}, userName=${Authen.userName}, division=${Authen.division}, requesterId=${Authen.requesterId}, dpId=${Authen.dpId}, lId=${Authen.lId}, departmentName=${Authen.departmentName}, loginUsername=${Authen.loginUsername}',
+          );
+          try {
+            debugPrint('Login parsed data: ${jsonEncode(data)}');
+          } catch (_) {
+            debugPrint('Login parsed data (raw): $data');
+          }
         } catch (_) {}
 
         showSnackbar(message, backgroundColor: Colors.green);

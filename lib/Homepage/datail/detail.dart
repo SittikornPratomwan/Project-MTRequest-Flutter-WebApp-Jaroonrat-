@@ -95,12 +95,150 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
   List<dynamic> _comments = [];
   bool _loadingComments = false;
+  List<dynamic> _approvers = [];
+  bool _loadingApprovers = false;
+  String? _currentRepairRequestId;
 
   @override
   void initState() {
     super.initState();
     _loadFilesForItem();
     _loadCommentsForItem();
+    _loadApproversForItem();
+  }
+
+  Future<void> _loadApproversForItem() async {
+    String? id;
+
+    if (widget.item != null && widget.item!.id.isNotEmpty) {
+      id = widget.item!.id;
+      debugPrint('Using item.id from navigation (approvers): $id');
+    }
+    if (id == null || id.isEmpty) {
+      final raw = widget.item?.rawData;
+      if (raw != null) {
+        id = raw['id']?.toString() ?? raw['repair_request_id']?.toString();
+        debugPrint('Using rawData id (approvers): $id');
+      }
+    }
+    if (id == null || id.isEmpty) {
+      debugPrint('ERROR: No ID provided for fetching approvers!');
+      return;
+    }
+    debugPrint('Fetching approvers for id: $id');
+    _currentRepairRequestId = id;
+    await _fetchApproversForId(id);
+  }
+
+  Future<void> _fetchApproversForId(String id) async {
+    final uri = Uri.parse('$_baseHost/drugs/repair-requests/$id/approvers');
+    setState(() {
+      _loadingApprovers = true;
+    });
+    try {
+      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        List<dynamic> list = [];
+        if (decoded is List) {
+          list = decoded;
+        } else if (decoded is Map) {
+          if (decoded['approvers'] is List) {
+            list = decoded['approvers'];
+          } else if (decoded['data'] is List) {
+            list = decoded['data'];
+          } else if (decoded['value'] is List) {
+            list = decoded['value'];
+          }
+        }
+        if (mounted) setState(() => _approvers = list);
+      }
+    } catch (e) {
+      debugPrint('Error fetching approvers: $e');
+    } finally {
+      if (mounted) setState(() => _loadingApprovers = false);
+    }
+  }
+
+  Future<void> _sendApproverAction(
+    int idx,
+    String approverId,
+    bool approve,
+  ) async {
+    if (_currentRepairRequestId == null) {
+      debugPrint('No repairRequestId available for approver action');
+      return;
+    }
+    final uri = Uri.parse(
+      '$_baseHost/drugs/repair-requests/$_currentRepairRequestId/approvers/$approverId',
+    );
+    try {
+      final body = jsonEncode({'approved': approve});
+      final resp = await http
+          .patch(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(const Duration(seconds: 10));
+      debugPrint('Approver action response: ${resp.statusCode} ${resp.body}');
+      // Optimistic update: mark locally if success
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        if (!mounted) return;
+        setState(() {
+          final now = DateTime.now().toIso8601String();
+          _approvers[idx]['approved'] = approve;
+          _approvers[idx]['approved_at'] = now;
+          _approvers[idx]['status'] = approve ? 'approved' : 'rejected';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(approve ? 'อนุมัติสำเร็จ' : 'ไม่อนุมัติสำเร็จ'),
+          ),
+        );
+      } else {
+        // still try to show feedback
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('การอัปเดตสถานะล้มเหลว (${resp.statusCode})')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error sending approver action: $e');
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('เกิดข้อผิดพลาด เชื่อมต่อไม่สำเร็จ')),
+        );
+    }
+  }
+
+  Future<void> _approveApproverAt(int idx) async {
+    final approver = _approvers[idx];
+    final approverId =
+        (approver['id'] ??
+                approver['approver_id'] ??
+                approver['user_id'] ??
+                approver['approverId'])
+            ?.toString();
+    if (approverId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสผู้อนุมัติ')));
+      return;
+    }
+    await _sendApproverAction(idx, approverId, true);
+  }
+
+  Future<void> _rejectApproverAt(int idx) async {
+    final approver = _approvers[idx];
+    final approverId =
+        (approver['id'] ??
+                approver['approver_id'] ??
+                approver['user_id'] ??
+                approver['approverId'])
+            ?.toString();
+    if (approverId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสผู้อนุมัติ')));
+      return;
+    }
+    await _sendApproverAction(idx, approverId, false);
   }
 
   Future<void> _loadFilesForItem() async {
@@ -808,17 +946,186 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                     _buildHeaderCell('ไม่อนุมัติ', color: Colors.red),
                   ],
                 ),
-                // Data Rows
-                _buildApprovalRow(
-                  '1',
-                  displayItem.approver.isNotEmpty
-                      ? displayItem.approver
-                      : 'ไม่มีข้อมูล',
-                  displayItem.status == 'อนุมัติ'
-                      ? 'อนุมัติ\n${displayItem.reqDate}'
-                      : '-',
-                  '-',
-                ),
+                if (_loadingApprovers)
+                  TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Center(child: Text('กำลังโหลด...')),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: SizedBox(),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: SizedBox(),
+                      ),
+                    ],
+                  ),
+                if (!_loadingApprovers && _approvers.isNotEmpty)
+                  ..._approvers.asMap().entries.map((e) {
+                    final idx = e.key;
+                    final approver = e.value;
+                    final username =
+                        (approver['username'] ??
+                                approver['user_name'] ??
+                                approver['name'] ??
+                                'ไม่มีข้อมูล')
+                            .toString();
+                    final status =
+                        (approver['status'] ?? approver['approved'] ?? '')
+                            .toString();
+                    final at =
+                        (approver['approved_at'] ??
+                                approver['approvedAt'] ??
+                                approver['date'] ??
+                                approver['created_at'] ??
+                                '')
+                            .toString();
+
+                    return TableRow(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Center(child: Text('${idx + 1}')),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Center(
+                            child: Text(
+                              username,
+                              style: TextStyle(
+                                color: Colors.blue[900],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(6.0),
+                          child: Center(
+                            child:
+                                status.toString().toLowerCase().contains(
+                                      'approved',
+                                    ) ||
+                                    approver['approved'] == true
+                                ? Column(
+                                    children: [
+                                      const Text(
+                                        'อนุมัติ',
+                                        style: TextStyle(
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      if (at.isNotEmpty)
+                                        Text(
+                                          '${_formatCreatedDateOnly(at)} ${_formatCreatedTimeOnly(at)}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                    ],
+                                  )
+                                : ElevatedButton(
+                                    onPressed: () => _approveApproverAt(idx),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 18.0,
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    child: const Text('อนุมัติ'),
+                                  ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(6.0),
+                          child: Center(
+                            child:
+                                status.toString().toLowerCase().contains(
+                                      'rejected',
+                                    ) ||
+                                    approver['approved'] == false
+                                ? Column(
+                                    children: [
+                                      const Text(
+                                        'ไม่อนุมัติ',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      if (at.isNotEmpty)
+                                        Text(
+                                          '${_formatCreatedDateOnly(at)} ${_formatCreatedTimeOnly(at)}',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                    ],
+                                  )
+                                : ElevatedButton(
+                                    onPressed: () => _rejectApproverAt(idx),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10.0,
+                                        horizontal: 18.0,
+                                      ),
+                                      textStyle: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    child: const Text('ไม่อนุมัติ'),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                if (!_loadingApprovers && _approvers.isEmpty)
+                  TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Center(child: Text('-')),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Center(child: Text('ไม่มีข้อมูล')),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Center(child: Text('-')),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Center(child: Text('-')),
+                      ),
+                    ],
+                  ),
               ],
             ),
 
