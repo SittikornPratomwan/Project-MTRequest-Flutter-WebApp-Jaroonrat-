@@ -125,6 +125,30 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return map[priority.toLowerCase()] ?? priority;
   }
 
+  // ฟังก์ชันแปล current_phase เป็น status ภาษาไทย
+  String _getStatusFromPhase(dynamic currentPhase) {
+    if (currentPhase == null) return 'รอการอนุมัติ';
+    final phase = int.tryParse(currentPhase.toString()) ?? 0;
+    if (phase == 1) return 'รอการอนุมัติ';
+    if (phase == 2) return 'กำลังดำเนินการ';
+    return 'รอการอนุมัติ';
+  }
+
+  // ฟังก์ชันเลือก reqDate ตามค่า current_phase
+  String _getReqDate(
+    dynamic currentPhase,
+    dynamic dueDate,
+    dynamic requestDate,
+    dynamic createdDate,
+  ) {
+    final phase = int.tryParse(currentPhase.toString()) ?? 0;
+    if (phase == 2 && dueDate != null && dueDate.toString().isNotEmpty) {
+      return dueDate.toString();
+    }
+    // Fallback to request_date or created_date
+    return requestDate?.toString() ?? createdDate?.toString() ?? 'รอการอนุมัติ';
+  }
+
   // ฟังก์ชันเรียก API
   Future<List<PurchaseItem>> fetchRepairRequests(int limit, int offset) async {
     try {
@@ -199,10 +223,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 item['title']?.toString() ??
                 item['description']?.toString() ??
                 '',
-            reqDate:
-                item['request_date']?.toString() ??
-                item['created_date']?.toString() ??
-                'รอการอนุมัติ',
+            reqDate: _getReqDate(
+              item['current_phase'],
+              item['due_date'],
+              item['request_date'],
+              item['created_date'],
+            ),
             prDate:
                 item['pr_date']?.toString() ??
                 item['po_date']?.toString() ??
@@ -216,7 +242,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 item['department_name']?.toString() ??
                 item['department']?.toString() ??
                 '',
-            status: item['status']?.toString() ?? 'รออนุมัติ',
+            status: _getStatusFromPhase(item['current_phase']),
+            // Fallback to item['status'] if current_phase not available
+            // status: item['status']?.toString() ?? 'รออนุมัติ',
             approver:
                 item['approver']?.toString() ??
                 item['approved_by']?.toString() ??
@@ -295,6 +323,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     setState(() {
       _searchKeyword = _keywordController.text.trim();
     });
+  }
+
+  // Calculate remaining days until a given date
+  int _getRemainingDays(String dateString) {
+    if (dateString.isEmpty || dateString == '-') return -1;
+    try {
+      final date = DateTime.parse(dateString);
+      final today = DateTime.now();
+      final remaining = date.difference(today).inDays;
+      return remaining;
+    } catch (_) {
+      return -1;
+    }
   }
 
   // Format a datetime string to date-only (YYYY-MM-DD). If parsing fails, return original or '-'.
@@ -849,16 +890,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             ),
                           ),
                         ),
-                        DataColumn(
-                          label: Text(
-                            'จบงาน',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1976D2),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
                       ],
                       rows: filteredItems.asMap().entries.map((entry) {
                         int index = entry.key;
@@ -938,7 +969,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   vertical: 8.0,
                                 ),
                                 child: SizedBox(
-                                  width: 200,
+                                  width: 350,
                                   child: Text(
                                     item.topic,
                                     overflow: TextOverflow.ellipsis,
@@ -969,12 +1000,27 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8.0,
                                 ),
-                                child: Text(
-                                  item.reqDate,
-                                  style: const TextStyle(
-                                    color: Color(0xFF4A5568),
-                                    fontSize: 14,
-                                  ),
+                                child: Builder(
+                                  builder: (context) {
+                                    final remainingDays = _getRemainingDays(
+                                      item.reqDate,
+                                    );
+                                    final isUrgent =
+                                        remainingDays >= 0 &&
+                                        remainingDays <= 2;
+                                    return Text(
+                                      _formatDateOnly(item.reqDate),
+                                      style: TextStyle(
+                                        color: isUrgent
+                                            ? const Color(0xFFE53E3E)
+                                            : const Color(0xFF4A5568),
+                                        fontSize: 14,
+                                        fontWeight: isUrgent
+                                            ? FontWeight.w700
+                                            : FontWeight.w400,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -1036,13 +1082,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                       ),
                                   ],
                                 ),
-                              ),
-                            ),
-                            const DataCell(
-                              Icon(
-                                Icons.edit,
-                                color: Color(0xFF1976D2),
-                                size: 24,
                               ),
                             ),
                           ],
