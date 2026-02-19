@@ -621,7 +621,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           // 2. Search / Filter Section (ด้านบน)
           // ------------------------------------
           Container(
-            padding: const EdgeInsets.all(16.0),
+            width: MediaQuery.of(context).size.width,
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 24.0,
+            ),
             color: Colors.white,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
