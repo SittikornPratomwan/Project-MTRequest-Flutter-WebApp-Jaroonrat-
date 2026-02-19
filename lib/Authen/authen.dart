@@ -11,6 +11,15 @@ class Authen extends StatefulWidget {
 
   // Stored auth token after successful login (nullable)
   static String? token;
+  // Optional user info populated from login response
+  static String? userName;
+  static String? division;
+  static int? requesterId;
+  static int? dpId;
+  // Additional fields extracted from login
+  static int? lId;
+  static String? departmentName;
+  static String? loginUsername;
 
   @override
   State<Authen> createState() => _AuthenState();
@@ -339,9 +348,13 @@ class _AuthenState extends State<Authen> {
             message = data['message'].toString();
           }
 
-          // Try to extract token from common fields
+          // Try to extract token and basic user info from common fields
           String? extractedToken;
+          String? extractedName;
+          String? extractedDivision;
+
           if (data is Map) {
+            // Token candidates
             if (data['token'] != null)
               extractedToken = data['token'].toString();
             else if (data['access_token'] != null)
@@ -352,11 +365,135 @@ class _AuthenState extends State<Authen> {
                 data['result']['token'] != null) {
               extractedToken = data['result']['token'].toString();
             }
+
+            // Name candidates
+            if (data['name'] != null)
+              extractedName = data['name'].toString();
+            else if (data['username'] != null)
+              extractedName = data['username'].toString();
+            else if (data['displayName'] != null)
+              extractedName = data['displayName'].toString();
+            else if (data['data'] is Map && data['data']['name'] != null) {
+              extractedName = data['data']['name'].toString();
+            } else if (data['user'] is Map && data['user']['name'] != null) {
+              extractedName = data['user']['name'].toString();
+            }
+
+            // Division / department candidates
+            if (data['division'] != null)
+              extractedDivision = data['division'].toString();
+            else if (data['department'] != null)
+              extractedDivision = data['department'].toString();
+            else if (data['dp'] != null)
+              extractedDivision = data['dp'].toString();
+            else if (data['data'] is Map && data['data']['division'] != null) {
+              extractedDivision = data['data']['division'].toString();
+            } else if (data['user'] is Map &&
+                data['user']['division'] != null) {
+              extractedDivision = data['user']['division'].toString();
+            }
           }
+
+          // Try to extract numeric IDs
+          try {
+            if (data is Map) {
+              // requester/user id
+              final idCandidates = [
+                data['id'],
+                data['user_id'],
+                data['userId'],
+                data['requester_id'],
+                data['requesterId'],
+                data['data'] is Map ? data['data']['id'] : null,
+                data['user'] is Map ? data['user']['id'] : null,
+              ];
+              for (var c in idCandidates) {
+                if (c != null) {
+                  final parsed = int.tryParse(c.toString());
+                  if (parsed != null) {
+                    Authen.requesterId = parsed;
+                    debugPrint('Saved requesterId: ${Authen.requesterId}');
+                    break;
+                  }
+                }
+              }
+
+              // dp / department id
+              final dpCandidates = [
+                data['dp_id'],
+                data['dpId'],
+                data['department_id'],
+                data['departmentId'],
+                data['dp'],
+                data['data'] is Map ? data['data']['dp_id'] : null,
+              ];
+              for (var c in dpCandidates) {
+                if (c != null) {
+                  final parsed = int.tryParse(c.toString());
+                  if (parsed != null) {
+                    Authen.dpId = parsed;
+                    debugPrint('Saved dpId: ${Authen.dpId}');
+                    break;
+                  }
+                }
+              }
+              // l_id / location id candidates
+              final lCandidates = [
+                data['l_id'],
+                data['lId'],
+                data['location_id'],
+                data['locationId'],
+                data['l'],
+                data['data'] is Map ? data['data']['l_id'] : null,
+                data['user'] is Map ? data['user']['l_id'] : null,
+              ];
+              for (var c in lCandidates) {
+                if (c != null) {
+                  final parsed = int.tryParse(c.toString());
+                  if (parsed != null) {
+                    Authen.lId = parsed;
+                    debugPrint('Saved lId: ${Authen.lId}');
+                    break;
+                  }
+                }
+              }
+
+              // department_name candidates
+              final deptNameCandidates = [
+                data['department_name'],
+                data['departmentName'],
+                data['dept_name'],
+                data['deptName'],
+                data['department'],
+                data['data'] is Map ? data['data']['department_name'] : null,
+                data['user'] is Map ? data['user']['department_name'] : null,
+              ];
+              for (var c in deptNameCandidates) {
+                if (c != null && c.toString().trim().isNotEmpty) {
+                  Authen.departmentName = c.toString();
+                  debugPrint('Saved departmentName: ${Authen.departmentName}');
+                  break;
+                }
+              }
+            }
+          } catch (_) {}
 
           if (extractedToken != null && extractedToken.isNotEmpty) {
             Authen.token = extractedToken;
             debugPrint('Saved auth token: ${Authen.token}');
+          }
+          if (extractedName != null && extractedName.isNotEmpty) {
+            Authen.userName = extractedName;
+            debugPrint('Saved user name: ${Authen.userName}');
+          }
+          if (extractedDivision != null && extractedDivision.isNotEmpty) {
+            Authen.division = extractedDivision;
+            debugPrint('Saved division: ${Authen.division}');
+          }
+          // Save the raw login username (from login form)
+          if (username.isNotEmpty) {
+            Authen.loginUsername = username;
+            debugPrint('Saved loginUsername: ${Authen.loginUsername}');
           }
         } catch (_) {}
 

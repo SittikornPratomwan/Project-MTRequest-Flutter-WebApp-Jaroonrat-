@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import '../../Authen/authen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -124,27 +125,108 @@ class _RequestFormPageState extends State<RequestFormPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // สร้าง payload
-      final payload = {
+      // สร้าง payload (เรียงลำดับและไม่ส่งค่า null สำหรับ id)
+      final Map<String, dynamic> payload = {
         'title': _titleController.text,
-        'priority': _mapPriority(_priority),
         'description': _descriptionController.text,
-        'requester_id': 1,
-        'dp_id': 1,
-        'l_id': 1,
+        'priority': _mapPriority(_priority),
+        'required_date': _formatDateForApi(_requestDate),
+        // workflow / status
         'status_code': 'in_approval',
         'current_status': 'new',
         'current_step_order': 1,
-        'required_date': _formatDateForApi(_requestDate),
+        // location / extra (l_id will be set from Authen if available)
       };
 
+      // Prefer numeric IDs when available; otherwise include name/division
+      if (Authen.requesterId != null) {
+        payload['requester_id'] = Authen.requesterId;
+      } else {
+        payload['name'] = Authen.userName ?? '';
+      }
+      //
+      //----------------------------------------------------------------------------------------------------------------
+      //  แปลงเลข department เป็น dp_id ให้ backend แทนการส่งชื่อ division แบบเดิม เพื่อความแม่นยำในการจัดหมวดหมู่และรายงานผล
+      //------------------------------------------------------------------------------------------------------------------------------
+      //
+      // Map department names to numeric dp_id when possible
+      final Map<String, int> _deptMap = {
+        'MT': 1,
+        'HR': 2,
+        'L5': 3,
+        'DL': 4,
+        'IMD': 9,
+        'L4': 12,
+        'ACC': 14,
+        'QA': 15,
+        'QC': 16,
+      };
+
+      if (Authen.dpId != null) {
+        payload['dp_id'] = Authen.dpId;
+      } else {
+        final divRaw = (Authen.division ?? '').toString().trim();
+        final divKey = divRaw.toUpperCase();
+        if (divKey.isNotEmpty && _deptMap.containsKey(divKey)) {
+          payload['dp_id'] = _deptMap[divKey];
+        } else if (divRaw.isNotEmpty) {
+          // If no mapping, keep the human-readable division for backend fallback
+          payload['division'] = divRaw;
+        }
+      }
+
+      // Include l_id from login if available, otherwise keep default 1
+      if (Authen.lId != null) {
+        payload['l_id'] = Authen.lId;
+      } else {
+        payload['l_id'] = 1;
+      }
+
+      // Include username (prefer full name from login, fallback to login username)
+      if (Authen.userName != null && Authen.userName!.isNotEmpty) {
+        payload['username'] = Authen.userName;
+      } else if (Authen.loginUsername != null &&
+          Authen.loginUsername!.isNotEmpty) {
+        payload['username'] = Authen.loginUsername;
+      }
+
+      // Include department_name from login if available
+      if (Authen.departmentName != null && Authen.departmentName!.isNotEmpty) {
+        payload['department_name'] = Authen.departmentName;
+      } else if (Authen.division != null && Authen.division!.isNotEmpty) {
+        payload['department_name'] = Authen.division;
+      }
+
+      // Log payload with one key:value per line for readability
+      final payloadLines = payload.entries
+          .map((e) {
+            final k = e.key;
+            final v = e.value;
+            String vs;
+            if (v == null) {
+              vs = 'null';
+            } else if (v is String || v is num || v is bool) {
+              vs = v.toString();
+            } else {
+              vs = jsonEncode(v);
+            }
+            return '$k: $vs';
+          })
+          .join('\n');
+
       print('Sending request to API...');
-      print('Payload: ${jsonEncode(payload)}');
+      print('Payload:\n$payloadLines');
+
+      final headers = {'Content-Type': 'application/json'};
+      if (Authen.token != null && Authen.token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer ${Authen.token}';
+        print('Including Authorization header for create request');
+      }
 
       final response = await http
           .post(
             Uri.parse('http://26.99.205.41:9000/drugs/repair-requests'),
-            headers: {'Content-Type': 'application/json'},
+            headers: headers,
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 10));
@@ -182,6 +264,12 @@ class _RequestFormPageState extends State<RequestFormPage> {
                 'http://26.99.205.41:9000/drugs/repair-requests/$createdId/files',
               );
               final req = http.MultipartRequest('POST', uri);
+
+              // Attach token to multipart upload if available
+              if (Authen.token != null && Authen.token!.isNotEmpty) {
+                req.headers['Authorization'] = 'Bearer ${Authen.token}';
+                print('Including Authorization header for file upload');
+              }
 
               // Include the created repair request id so the server can associate files
               // with the newly created request. Add both camelCase and snake_case
