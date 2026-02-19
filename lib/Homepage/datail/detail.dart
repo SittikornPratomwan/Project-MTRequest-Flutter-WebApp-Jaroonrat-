@@ -353,6 +353,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   }
 
   String _formatCreatedAt(String raw) {
+    if (raw.isEmpty) return '-';
     try {
       final dt = DateTime.parse(raw);
       final y = dt.year.toString().padLeft(4, '0');
@@ -360,9 +361,26 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       final d = dt.day.toString().padLeft(2, '0');
       final hh = dt.hour.toString().padLeft(2, '0');
       final mm = dt.minute.toString().padLeft(2, '0');
-      return '$d/$m/$y $hh:$mm';
+      return '$d/$m/$y\n$hh:$mm';
     } catch (_) {
-      // Fallback: try extracting and reformatting common date patterns
+      final date = _formatCreatedDateOnly(raw);
+      final time = _formatCreatedTimeOnly(raw);
+      if (time == '-' || time.isEmpty) return date;
+      if (date == raw) return '$raw\nเวลา: $time';
+      return '$date\nเวลา: $time';
+    }
+  }
+
+  // Return date part (DD/MM/YYYY) from a datetime string, or the original/fallback
+  String _formatCreatedDateOnly(String raw) {
+    if (raw.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(raw);
+      final y = dt.year.toString().padLeft(4, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      final d = dt.day.toString().padLeft(2, '0');
+      return '$d/$m/$y';
+    } catch (_) {
       String part = raw;
       if (raw.contains(' ')) part = raw.split(' ').first;
       if (part.contains('-')) {
@@ -386,6 +404,28 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         }
       }
       return raw;
+    }
+  }
+
+  // Return time part (HH:MM) from a datetime string, or '-' if not found
+  String _formatCreatedTimeOnly(String raw) {
+    if (raw.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(raw);
+      final hh = dt.hour.toString().padLeft(2, '0');
+      final mm = dt.minute.toString().padLeft(2, '0');
+      return '$hh:$mm';
+    } catch (_) {
+      final timeRegex = RegExp(r'(\d{1,2}:\d{2})');
+      final m = timeRegex.firstMatch(raw);
+      if (m != null) return m.group(0) ?? '-';
+      if (raw.contains(' ')) {
+        final parts = raw.split(' ');
+        for (var p in parts) {
+          if (timeRegex.hasMatch(p)) return timeRegex.firstMatch(p)!.group(0)!;
+        }
+      }
+      return '-';
     }
   }
 
@@ -450,6 +490,24 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           status: 'N/A',
           approver: 'N/A',
         );
+
+    // Prefer API-provided `username` and `department_name` when present in rawData
+    final raw = displayItem.rawData ?? <String, dynamic>{};
+    final apiUsername =
+        (raw['username'] ??
+                raw['user_name'] ??
+                raw['requester'] ??
+                raw['requested_by'])
+            ?.toString();
+    final apiDept =
+        (raw['department_name'] ?? raw['department'] ?? raw['dept_name'])
+            ?.toString();
+    final shownName = (apiUsername != null && apiUsername.isNotEmpty)
+        ? apiUsername
+        : displayItem.reqBy;
+    final shownDept = (apiDept != null && apiDept.isNotEmpty)
+        ? apiDept
+        : displayItem.dept;
 
     return Scaffold(
       appBar: AppBar(
@@ -529,22 +587,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         color: Colors.grey,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      displayItem.reqBy,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: valueColor,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      displayItem.dept,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: valueColor,
-                      ),
-                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ],
@@ -564,6 +607,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   labelColor,
                   valueColor,
                 ),
+                // Show requester and department similar to the header
+                _buildTableRow('ผู้แจ้ง :', shownName, labelColor, valueColor),
+                _buildTableRow('แผนก :', shownDept, labelColor, valueColor),
                 if (displayItem.approver.isNotEmpty)
                   _buildTableRow(
                     'เรียน/สำเนาถึง :',

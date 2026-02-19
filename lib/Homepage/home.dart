@@ -775,7 +775,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -785,7 +785,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -795,7 +795,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -805,7 +805,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -815,7 +815,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -825,7 +825,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -835,7 +835,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -845,7 +845,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -855,7 +855,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF1976D2),
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
                         ),
@@ -901,7 +901,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -927,7 +927,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                             item.type == 'กำหนดเอง'
                                         ? FontWeight.w600
                                         : FontWeight.w500,
-                                    fontSize: 15,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ),
@@ -944,7 +944,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                       color: Color(0xFF2D3748),
-                                      fontSize: 16,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ),
@@ -959,7 +959,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   _formatDateOnly(item.createdAt),
                                   style: const TextStyle(
                                     color: Color(0xFF4A5568),
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -973,7 +973,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   item.reqDate,
                                   style: const TextStyle(
                                     color: Color(0xFF4A5568),
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -987,7 +987,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   item.reqBy,
                                   style: const TextStyle(
                                     color: Color(0xFF4A5568),
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -1002,7 +1002,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   style: const TextStyle(
                                     color: Color(0xFF38A169),
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 16,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
@@ -1023,14 +1023,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                             ? const Color(0xFF38A169)
                                             : const Color(0xFFD69E2E),
                                         fontWeight: FontWeight.w700,
-                                        fontSize: 16,
+                                        fontSize: 14,
                                       ),
                                     ),
                                     if (item.approver.isNotEmpty)
                                       Text(
                                         item.approver,
                                         style: const TextStyle(
-                                          fontSize: 13,
+                                          fontSize: 12,
                                           color: Color(0xFF718096),
                                         ),
                                       ),
