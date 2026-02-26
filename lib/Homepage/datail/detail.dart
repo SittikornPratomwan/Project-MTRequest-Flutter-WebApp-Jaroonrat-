@@ -1497,6 +1497,66 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ),
               ),
 
+            const SizedBox(height: 12),
+
+            // -- Delete button --
+            Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 24,
+                  ),
+                ),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('ยืนยันการลบ'),
+                      content: const Text('ต้องการลบคำขอนี้จริงหรือไม่?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('ยกเลิก'),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: const Text('ลบ'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    // Resolve id from displayItem or rawData or fallback resolver
+                    String? id = displayItem.id;
+                    if (id == null || id.isEmpty) {
+                      final raw = displayItem.rawData;
+                      if (raw != null) {
+                        id =
+                            raw['id']?.toString() ??
+                            raw['repair_request_id']?.toString();
+                      }
+                    }
+                    if (id == null || id.isEmpty) {
+                      id = await _resolveIdFromList();
+                    }
+                    await _deleteRequest(id);
+                  }
+                },
+                child: const Text(
+                  'ลบคำขอ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 30),
           ],
         ),
@@ -1532,6 +1592,71 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         );
       },
     );
+  }
+
+  Future<void> _deleteRequest(String? id) async {
+    if (id == null || id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ไม่พบรหัสคำขอที่ต้องการลบ')),
+      );
+      return;
+    }
+
+    final uriPrimary = Uri.parse('$_baseHost/repair-requests/$id');
+    final uriAlt = Uri.parse('$_baseHost/repair-requests/$id/delete');
+
+    try {
+      final headers = _authHeaders();
+      final resp = await http
+          .delete(uriPrimary, headers: headers)
+          .timeout(const Duration(seconds: 10));
+      debugPrint('DELETE $uriPrimary -> ${resp.statusCode} ${resp.body}');
+      if (resp.statusCode == 200 ||
+          resp.statusCode == 202 ||
+          resp.statusCode == 204) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('ลบคำขอเรียบร้อยแล้ว')));
+          Navigator.of(context).pop();
+        }
+        return;
+      }
+
+      // Try alternative endpoint (some APIs use POST /.../delete)
+      try {
+        final r2 = await http
+            .post(uriAlt, headers: headers)
+            .timeout(const Duration(seconds: 10));
+        debugPrint('ALT POST $uriAlt -> ${r2.statusCode} ${r2.body}');
+        if (r2.statusCode == 200 ||
+            r2.statusCode == 202 ||
+            r2.statusCode == 204) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('ลบคำขอเรียบร้อยแล้ว')),
+            );
+            Navigator.of(context).pop();
+          }
+          return;
+        }
+      } catch (e) {
+        debugPrint('Alt delete error: $e');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('ไม่สามารถลบคำขอได้')));
+      }
+    } catch (e) {
+      debugPrint('Error deleting request: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการลบ')));
+      }
+    }
   }
 
   // --- Helper Widgets ---
