@@ -416,6 +416,20 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           .toList();
     }
 
+    // Filter by status (current_phase): 0=all, 1=รอการอนุมัติ, 2=กำลังดำเนินการ, 3=งานที่จบแล้ว
+    if (selectedRadio != 0) {
+      filtered = filtered.where((item) {
+        if (item.rawData == null) return false;
+        final phase =
+            int.tryParse(item.rawData!['current_phase']?.toString() ?? '0') ??
+            0;
+        if (selectedRadio == 1) return phase == 1; // รอการอนุมัติ
+        if (selectedRadio == 2) return phase == 2; // กำลังดำเนินการ
+        if (selectedRadio == 3) return phase > 2; // งานที่จบแล้ว (phase > 2)
+        return false;
+      }).toList();
+    }
+
     // Filter by search keyword
     if (_searchKeyword.isNotEmpty) {
       filtered = filtered.where((item) {
