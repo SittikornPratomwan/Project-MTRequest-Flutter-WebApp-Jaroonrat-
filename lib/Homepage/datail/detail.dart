@@ -1498,13 +1498,36 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                       ],
                                     ),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, size: 18),
-                                    color: Colors.red,
-                                    onPressed: () => _deleteComment(
-                                      comment['id']?.toString() ?? '',
-                                    ),
-                                    tooltip: 'ลบคอมเมนต์',
+                                  // Show delete button only when comment owner matches logged-in user
+                                  Builder(
+                                    builder: (ctx) {
+                                      final commentUserId =
+                                          (comment['user_id'] ??
+                                                  comment['userId'])
+                                              ?.toString();
+                                      final loggedUserId = Authen.requesterId
+                                          ?.toString();
+                                      final canDeleteComment =
+                                          loggedUserId != null &&
+                                          commentUserId != null &&
+                                          commentUserId == loggedUserId;
+
+                                      if (!canDeleteComment)
+                                        return const SizedBox();
+
+                                      return IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          size: 18,
+                                        ),
+                                        color: Colors.red,
+                                        onPressed: () => _deleteComment(
+                                          comment['id']?.toString() ?? '',
+                                          commentUserId,
+                                        ),
+                                        tooltip: 'ลบคอมเมนต์',
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
@@ -1767,7 +1790,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
-  Future<void> _deleteComment(String commentId) async {
+  Future<void> _deleteComment(String commentId, [String? commentUserId]) async {
     if (commentId.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -1795,6 +1818,21 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     );
 
     if (confirmed != true) return;
+
+    // Authorization: only allow delete when logged-in user matches comment owner
+    final loggedUserId = Authen.requesterId?.toString();
+    if (loggedUserId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณาล็อกอินก่อนทำรายการ')));
+      return;
+    }
+    if (commentUserId == null || commentUserId != loggedUserId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('คุณไม่มีสิทธิ์ลบคอมเมนต์นี้')),
+      );
+      return;
+    }
 
     try {
       if (_currentRepairRequestId == null) {
