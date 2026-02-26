@@ -830,7 +830,23 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Fixed right-aligned buttons: ทั้งหมด, รายการที่รอคุณอนุมัติ, แจ้งซ่อมใหม่
+                    // Fixed right-aligned buttons: ค้นหาข้อมูล, ทั้งหมด, รายการที่รอคุณอนุมัติ, แจ้งซ่อมใหม่
+                    ElevatedButton(
+                      onPressed: _performSearch,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1976D2),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      child: const Text('ค้นหาข้อมูล'),
+                    ),
+                    const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () {
                         setState(() {
@@ -874,23 +890,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Moved search button to the right group
-                    ElevatedButton(
-                      onPressed: _performSearch,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1976D2),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      child: const Text('ค้นหาข้อมูล'),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
