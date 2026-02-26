@@ -876,9 +876,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     ElevatedButton.icon(
                       onPressed: _showPendingApprovalItems,
                       icon: const Icon(Icons.pending_actions, size: 18),
-                      label: Text(
-                        'รายการที่รอคุณอนุมัติ${_pendingApprovalCount > 0 ? ' ($_pendingApprovalCount)' : ''}',
-                      ),
+                      label: Text('รายการที่รอคุณอนุมัติ'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFED8936),
                         foregroundColor: Colors.white,
