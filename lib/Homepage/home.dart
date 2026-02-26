@@ -1136,7 +1136,15 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   builder: (context) =>
                                       PurchaseDetailPage(item: item),
                                 ),
-                              );
+                              ).then((result) {
+                                // If detail page indicates the item was deleted, refresh list
+                                if (result == true) {
+                                  setState(() {
+                                    _currentPage = 1;
+                                  });
+                                  _loadData(0);
+                                }
+                              });
                             }
                           },
                           color: MaterialStateProperty.resolveWith<Color?>(

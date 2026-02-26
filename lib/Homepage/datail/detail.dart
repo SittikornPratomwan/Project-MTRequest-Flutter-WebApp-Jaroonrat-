@@ -1238,6 +1238,19 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                             approver['step_state'].toString().toLowerCase() ==
                                 'rejected');
 
+                    // Determine whether logged-in user can act on this approver row
+                    final approverUserIdRaw =
+                        (approver['id'] ??
+                        approver['user_id'] ??
+                        approver['approver_id'] ??
+                        approver['approverId']);
+                    final approverUserId = approverUserIdRaw?.toString();
+                    final loggedUserId = Authen.requesterId?.toString();
+                    final canAct =
+                        approverUserId != null &&
+                        loggedUserId != null &&
+                        approverUserId == loggedUserId;
+
                     return TableRow(
                       children: [
                         Padding(
@@ -1279,22 +1292,25 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                         ),
                                     ],
                                   )
-                                : ElevatedButton(
-                                    onPressed: () => _approveApproverAt(idx),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 18.0,
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    child: const Text('อนุมัติ'),
-                                  ),
+                                : (canAct
+                                      ? ElevatedButton(
+                                          onPressed: () =>
+                                              _approveApproverAt(idx),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.green,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 10.0,
+                                              horizontal: 18.0,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          child: const Text('อนุมัติ'),
+                                        )
+                                      : const SizedBox()),
                           ),
                         ),
                         Padding(
@@ -1322,22 +1338,25 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                   )
                                 : isApproved
                                 ? const SizedBox()
-                                : ElevatedButton(
-                                    onPressed: () => _rejectApproverAt(idx),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.redAccent,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10.0,
-                                        horizontal: 18.0,
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    child: const Text('ไม่อนุมัติ'),
-                                  ),
+                                : (canAct
+                                      ? ElevatedButton(
+                                          onPressed: () =>
+                                              _rejectApproverAt(idx),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.redAccent,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 10.0,
+                                              horizontal: 18.0,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          child: const Text('ไม่อนุมัติ'),
+                                        )
+                                      : const SizedBox()),
                           ),
                         ),
                       ],
@@ -1499,62 +1518,133 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
             const SizedBox(height: 12),
 
-            // -- Delete button --
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 24,
-                  ),
-                ),
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('ยืนยันการลบ'),
-                      content: const Text('ต้องการลบคำขอนี้จริงหรือไม่?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('ยกเลิก'),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('ลบ'),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (confirmed == true) {
-                    // Resolve id from displayItem or rawData or fallback resolver
-                    String? id = displayItem.id;
-                    if (id == null || id.isEmpty) {
-                      final raw = displayItem.rawData;
-                      if (raw != null) {
-                        id =
-                            raw['id']?.toString() ??
-                            raw['repair_request_id']?.toString();
-                      }
+            // Determine whether current user is the creator and no approver has approved yet
+            Builder(
+              builder: (context) {
+                final loggedUserId = Authen.requesterId?.toString();
+                String? creatorId;
+                // try common keys in raw data
+                final creatorCandidates = [
+                  'user_id',
+                  'requester_id',
+                  'created_by',
+                  'created_by_id',
+                  'owner_id',
+                  'requesterId',
+                  'creator_id',
+                  'creator',
+                ];
+                for (final k in creatorCandidates) {
+                  final v = raw[k];
+                  if (v == null) continue;
+                  if (v is Map) {
+                    if (v['id'] != null) {
+                      creatorId = v['id'].toString();
+                      break;
                     }
-                    if (id == null || id.isEmpty) {
-                      id = await _resolveIdFromList();
-                    }
-                    await _deleteRequest(id);
+                  } else {
+                    creatorId = v.toString();
+                    break;
                   }
-                },
-                child: const Text(
-                  'ลบคำขอ',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
+                }
+
+                // fallback: sometimes displayItem.reqBy holds a numeric id string
+                if (creatorId == null) {
+                  try {
+                    final maybe = int.tryParse(displayItem.reqBy);
+                    if (maybe != null) creatorId = maybe.toString();
+                  } catch (_) {}
+                }
+
+                bool anyApproved = false;
+                for (final a in _approvers) {
+                  final status =
+                      (a['status'] ??
+                              a['step_state'] ??
+                              a['state'] ??
+                              a['approved'] ??
+                              '')
+                          .toString()
+                          .toLowerCase();
+                  if (status.contains('approved')) {
+                    anyApproved = true;
+                    break;
+                  }
+                  if (a['approved'] == true) {
+                    anyApproved = true;
+                    break;
+                  }
+                  if (a['step_state'] != null &&
+                      a['step_state'].toString().toLowerCase() == 'approved') {
+                    anyApproved = true;
+                    break;
+                  }
+                }
+
+                final canDelete =
+                    loggedUserId != null &&
+                    creatorId != null &&
+                    loggedUserId == creatorId &&
+                    !anyApproved;
+
+                if (!canDelete) return const SizedBox();
+
+                return Center(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 24,
+                      ),
+                    ),
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('ยืนยันการลบ'),
+                          content: const Text('ต้องการลบคำขอนี้จริงหรือไม่?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('ยกเลิก'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('ลบ'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmed == true) {
+                        String? id = displayItem.id;
+                        if (id == null || id.isEmpty) {
+                          final rawData = displayItem.rawData;
+                          if (rawData != null) {
+                            id =
+                                rawData['id']?.toString() ??
+                                rawData['repair_request_id']?.toString();
+                          }
+                        }
+                        if (id == null || id.isEmpty) {
+                          id = await _resolveIdFromList();
+                        }
+                        await _deleteRequest(id);
+                      }
+                    },
+                    child: const Text(
+                      'ลบคำขอ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 30),
@@ -1618,7 +1708,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('ลบคำขอเรียบร้อยแล้ว')));
-          Navigator.of(context).pop();
+          Navigator.of(context).pop(true);
         }
         return;
       }
@@ -1636,7 +1726,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('ลบคำขอเรียบร้อยแล้ว')),
             );
-            Navigator.of(context).pop();
+            Navigator.of(context).pop(true);
           }
           return;
         }
