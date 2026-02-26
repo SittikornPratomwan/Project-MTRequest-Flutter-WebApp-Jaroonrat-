@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../Authen/authen.dart';
 
 class RemarkPage extends StatefulWidget {
   const RemarkPage({super.key});
@@ -30,10 +31,14 @@ Future<Map<String, dynamic>?> showRemarkDialog(
       final uri = Uri.parse(
         'http://26.99.205.41:9000/drugs/repair-requests/$repairRequestId/comments',
       );
+      final headers = {'Content-Type': 'application/json'};
+      if (Authen.token != null && Authen.token!.isNotEmpty) {
+        headers['Authorization'] = 'Bearer ${Authen.token}';
+      }
       final response = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: headers,
             body: jsonEncode({'user_id': 2, 'comment': comment}),
           )
           .timeout(const Duration(seconds: 10));

@@ -810,9 +810,12 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 if (remark.isNotEmpty) {
                   // TODO: Save remark to API or local storage
                   print('Remark saved: $remark');
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Remark saved')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Remark saved'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
                   Navigator.pop(context);
                 }
               },
@@ -889,9 +892,12 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             final remark = result['remark'] as String? ?? '';
             final images = result['images'] as List<Uint8List>? ?? [];
             if (remark.isNotEmpty || images.isNotEmpty) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Remark saved')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Remark saved'),
+                  backgroundColor: Colors.green,
+                ),
+              );
               // Refresh comments
               await _loadCommentsForItem();
             }
