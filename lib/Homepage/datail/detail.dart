@@ -1474,12 +1474,16 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          username.toString(),
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              username.toString(),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                         if (timestamp.toString().isNotEmpty)
                                           Text(
@@ -1493,6 +1497,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                           ),
                                       ],
                                     ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, size: 18),
+                                    color: Colors.red,
+                                    onPressed: () => _deleteComment(
+                                      comment['id']?.toString() ?? '',
+                                    ),
+                                    tooltip: 'ลบคอมเมนต์',
                                   ),
                                 ],
                               ),
@@ -1747,6 +1759,82 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       }
     } catch (e) {
       debugPrint('Error deleting request: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการลบ')));
+      }
+    }
+  }
+
+  Future<void> _deleteComment(String commentId) async {
+    if (commentId.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสคอมเมนต์')));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ยืนยันการลบ'),
+        content: const Text('ต้องการลบคอมเมนต์นี้จริงหรือไม่?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('ลบ'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      if (_currentRepairRequestId == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสคำขอ')));
+        return;
+      }
+
+      final uri = Uri.parse(
+        '$_baseHost/repair-requests/$_currentRepairRequestId/comments/$commentId',
+      );
+      final headers = _authHeaders();
+
+      final resp = await http
+          .delete(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+
+      debugPrint('DELETE comment -> ${resp.statusCode} ${resp.body}');
+
+      if (resp.statusCode == 200 ||
+          resp.statusCode == 202 ||
+          resp.statusCode == 204) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ลบคอมเมนต์เรียบร้อยแล้ว')),
+          );
+          // Refresh comments
+          await _loadCommentsForItem();
+        }
+        return;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('ไม่สามารถลบคอมเมนต์ได้')));
+      }
+    } catch (e) {
+      debugPrint('Error deleting comment: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
