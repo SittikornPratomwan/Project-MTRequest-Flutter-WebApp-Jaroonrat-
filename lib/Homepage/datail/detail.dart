@@ -1804,9 +1804,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         return;
       }
 
-      final uri = Uri.parse(
-        '$_baseHost/repair-requests/$_currentRepairRequestId/comments/$commentId',
-      );
+      // Use comment-specific delete endpoint: /repair-requests/comments/:commentId
+      final uri = Uri.parse('$_baseHost/repair-requests/comments/$commentId');
       final headers = _authHeaders();
 
       final resp = await http
