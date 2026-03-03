@@ -59,6 +59,8 @@ class PurchaseReportPage extends StatefulWidget {
 class _PurchaseReportPageState extends State<PurchaseReportPage> {
   late Future<List<PurchaseItem>> _futureItems;
   PurchaseItem? _selectedItem;
+  // Set of IDs marked as read in this session
+  final Set<String> _readIds = <String>{};
   bool _showPendingApproval = false; // Flag to show pending approval items
   int _pendingApprovalCount = 0; // Count of pending approval items
 
@@ -1015,6 +1017,16 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       columns: const [
                         DataColumn(
                           label: Text(
+                            'สถานะ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1976D2),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
                             'หมายเลข',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
@@ -1102,6 +1114,10 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           onSelectChanged: (selected) {
                             setState(() {
                               _selectedItem = selected == true ? item : null;
+                              if (selected == true) {
+                                // mark as read when user selects (opens) the item
+                                if (item.id.isNotEmpty) _readIds.add(item.id);
+                              }
                             });
                             if (selected == true) {
                               print('========================================');
@@ -1133,6 +1149,22 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 : const Color(0xFFF7FAFC),
                           ),
                           cells: [
+                            DataCell(
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0,
+                                ),
+                                child: Icon(
+                                  _readIds.contains(item.id)
+                                      ? Icons.mark_email_read
+                                      : Icons.markunread,
+                                  color: _readIds.contains(item.id)
+                                      ? const Color(0xFF38A169)
+                                      : const Color(0xFFED8936),
+                                  size: 20,
+                                ),
+                              ),
+                            ),
                             DataCell(
                               Padding(
                                 padding: const EdgeInsets.symmetric(

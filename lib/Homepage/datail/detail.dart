@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'remark.dart';
 import '../../Authen/authen.dart';
+import 'closejob.dart';
 
 // Data Model for detail page
 class PurchaseItem {
@@ -1688,6 +1689,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               },
             ),
 
+            // ปุ่มปิดงาน (ย้ายไปยัง CloseJobButton)
+            CloseJobButton(item: displayItem),
+
             const SizedBox(height: 30),
           ],
         ),
@@ -1788,6 +1792,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         ).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการลบ')));
       }
     }
+  }
+
+  Future<void> _closeRequest(String? id) async {
+    // Moved to CloseJobButton widget in closejob.dart
+    return;
   }
 
   Future<void> _deleteComment(String commentId, [String? commentUserId]) async {
