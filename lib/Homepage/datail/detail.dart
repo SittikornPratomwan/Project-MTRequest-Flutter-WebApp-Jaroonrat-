@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'remark.dart';
 import '../../Authen/authen.dart';
 import 'closejob.dart';
+import 'document.dart';
 
 // Data Model for detail page
 class PurchaseItem {
@@ -1689,8 +1690,35 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               },
             ),
 
-            // ปุ่มปิดงาน (ย้ายไปยัง CloseJobButton)
-            CloseJobButton(item: displayItem),
+            // ปุ่มปิดงาน (ย้ายไปยัง CloseJobButton) + ปุ่มเอกสาร
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CloseJobButton(item: displayItem),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const DocumentPage(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'เอกสาร',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
 
             const SizedBox(height: 30),
           ],

@@ -158,6 +158,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return 'รอการอนุมัติ';
   }
 
+  // ตรวจสอบไอเท็ม (Map) หากมี key 'current_step_order' == 3
+  // ให้คืนค่าเป็น 'ดำเนินการสำเร็จ' มิฉะนั้น fallback ไปยัง phase
+  String _getStatusFromItem(dynamic item) {
+    try {
+      if (item is Map && item.containsKey('current_step_order')) {
+        final raw = item['current_step_order'];
+        final v = int.tryParse(raw?.toString() ?? '') ?? -1;
+        if (v == 3) return 'ดำเนินการสำเร็จ';
+      }
+    } catch (_) {}
+    return _getStatusFromPhase(item is Map ? item['current_phase'] : item);
+  }
+
   // ฟังก์ชันเลือก reqDate ตามค่า current_phase
   String _getReqDate(
     dynamic currentPhase,
@@ -258,7 +271,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               item['department_name']?.toString() ??
               item['department']?.toString() ??
               '',
-          status: _getStatusFromPhase(item['current_phase']),
+          status: _getStatusFromItem(item),
           approver:
               item['approver']?.toString() ??
               item['approved_by']?.toString() ??
@@ -368,7 +381,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               item['department_name']?.toString() ??
               item['department']?.toString() ??
               '',
-          status: 'รอการอนุมัติ',
+          status: _getStatusFromItem(item),
           approver:
               item['approver']?.toString() ??
               item['approved_by']?.toString() ??
@@ -1308,7 +1321,11 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                     Text(
                                       item.status,
                                       style: TextStyle(
-                                        color: item.status == 'อนุมัติ'
+                                        color:
+                                            (item.status == 'อนุมัติ' ||
+                                                item.status ==
+                                                    'ดำเนินการสำเร็จ' ||
+                                                item.status.contains('สำเร็จ'))
                                             ? const Color(0xFF38A169)
                                             : const Color(0xFFD69E2E),
                                         fontWeight: FontWeight.w700,
