@@ -1,3 +1,5 @@
+// ignore_for_file: dead_code, unused_field, unused_element, unused_local_variable
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -219,7 +221,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     final body = jsonEncode(bodyMap);
     final headers = _authHeaders(json: true);
 
-    Future<bool> _handleSuccess() async {
+    Future<bool> handleSuccess() async {
       if (!mounted) return false;
       setState(() {
         final now = DateTime.now().toIso8601String();
@@ -248,7 +250,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         if (pResp.statusCode == 200 ||
             pResp.statusCode == 201 ||
             pResp.statusCode == 204) {
-          await _handleSuccess();
+          await handleSuccess();
           return;
         }
       } catch (e) {
@@ -264,7 +266,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         if (resp.statusCode == 200 ||
             resp.statusCode == 201 ||
             resp.statusCode == 204) {
-          await _handleSuccess();
+          await handleSuccess();
           return;
         }
 
@@ -280,7 +282,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             if (r2.statusCode == 200 ||
                 r2.statusCode == 201 ||
                 r2.statusCode == 204) {
-              await _handleSuccess();
+              await handleSuccess();
               return;
             }
           } catch (e) {
@@ -301,10 +303,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       }
     } catch (e) {
       debugPrint('Error sending approver action: $e');
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('เกิดข้อผิดพลาด เชื่อมต่อไม่สำเร็จ')),
         );
+      }
     }
   }
 
@@ -574,7 +577,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         }
         if (mounted) setState(() => _fileUrls = urls);
       }
-    } catch (e) {
     } finally {
       if (mounted) setState(() => _loadingFiles = false);
     }
@@ -688,8 +690,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         if (approver[k] != null) {
           final v = approver[k];
           if (v is String && v.isNotEmpty) return v;
-          if (v is Map && v['username'] != null)
+          if (v is Map && v['username'] != null) {
             return v['username'].toString();
+          }
         }
       }
       // check nested common containers
@@ -907,8 +910,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         },
         backgroundColor: const Color(0xFF48BB78),
         foregroundColor: Colors.white,
-        child: const Icon(Icons.note_add, color: Colors.white),
         tooltip: 'Add Remark',
+        child: const Icon(Icons.note_add, color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -1369,7 +1372,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         ),
                       ],
                     );
-                  }).toList(),
+                  }),
                 if (!_loadingApprovers && _approvers.isEmpty)
                   TableRow(
                     children: [
@@ -1514,8 +1517,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                           commentUserId != null &&
                                           commentUserId == loggedUserId;
 
-                                      if (!canDeleteComment)
+                                      if (!canDeleteComment) {
                                         return const SizedBox();
+                                      }
 
                                       return IconButton(
                                         icon: const Icon(
@@ -1667,7 +1671,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
                       if (confirmed == true) {
                         String? id = displayItem.id;
-                        if (id == null || id.isEmpty) {
+                        if (id.isEmpty) {
                           final rawData = displayItem.rawData;
                           if (rawData != null) {
                             id =

@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_null_comparison, dead_code, unused_local_variable, unused_element
+
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -68,8 +70,8 @@ Future<Map<String, dynamic>?> showRemarkDialog(
             builder: (context, setState) {
               Future<void> pickImages() async {
                 try {
-                  final List<XFile>? picked = await picker.pickMultiImage();
-                  if (picked != null && picked.isNotEmpty) {
+                  final List<XFile> picked = await picker.pickMultiImage();
+                  if (picked.isNotEmpty) {
                     for (final x in picked) {
                       if (images.length >= maxImages) break;
                       final bytes = await x.readAsBytes();
@@ -277,8 +279,8 @@ class _RemarkPageState extends State<RemarkPage> {
   Future<void> _pickImages() async {
     try {
       // Try multi image (works on many platforms)
-      final List<XFile>? picked = await _picker.pickMultiImage();
-      if (picked != null && picked.isNotEmpty) {
+      final List<XFile> picked = await _picker.pickMultiImage();
+      if (picked.isNotEmpty) {
         for (final x in picked) {
           if (_images.length >= _maxImages) break;
           final bytes = await x.readAsBytes();

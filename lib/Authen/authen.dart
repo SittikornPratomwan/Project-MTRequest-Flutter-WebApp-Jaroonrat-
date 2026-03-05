@@ -355,9 +355,9 @@ class _AuthenState extends State<Authen> {
 
           if (data is Map) {
             // Token candidates
-            if (data['token'] != null)
+            if (data['token'] != null) {
               extractedToken = data['token'].toString();
-            else if (data['access_token'] != null)
+            } else if (data['access_token'] != null)
               extractedToken = data['access_token'].toString();
             else if (data['data'] is Map && data['data']['token'] != null) {
               extractedToken = data['data']['token'].toString();
@@ -367,9 +367,9 @@ class _AuthenState extends State<Authen> {
             }
 
             // Name candidates
-            if (data['name'] != null)
+            if (data['name'] != null) {
               extractedName = data['name'].toString();
-            else if (data['username'] != null)
+            } else if (data['username'] != null)
               extractedName = data['username'].toString();
             else if (data['displayName'] != null)
               extractedName = data['displayName'].toString();
@@ -380,9 +380,9 @@ class _AuthenState extends State<Authen> {
             }
 
             // Division / department candidates
-            if (data['division'] != null)
+            if (data['division'] != null) {
               extractedDivision = data['division'].toString();
-            else if (data['department'] != null)
+            } else if (data['department'] != null)
               extractedDivision = data['department'].toString();
             else if (data['dp'] != null)
               extractedDivision = data['dp'].toString();

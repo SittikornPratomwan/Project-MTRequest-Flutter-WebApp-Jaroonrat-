@@ -150,7 +150,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
       //------------------------------------------------------------------------------------------------------------------------------
       //
       // Map department names to numeric dp_id when possible
-      final Map<String, int> _deptMap = {
+      final Map<String, int> deptMap = {
         'MT': 1,
         'HR': 2,
         'L5': 3,
@@ -167,8 +167,8 @@ class _RequestFormPageState extends State<RequestFormPage> {
       } else {
         final divRaw = (Authen.division ?? '').toString().trim();
         final divKey = divRaw.toUpperCase();
-        if (divKey.isNotEmpty && _deptMap.containsKey(divKey)) {
-          payload['dp_id'] = _deptMap[divKey];
+        if (divKey.isNotEmpty && deptMap.containsKey(divKey)) {
+          payload['dp_id'] = deptMap[divKey];
         } else if (divRaw.isNotEmpty) {
           // If no mapping, keep the human-readable division for backend fallback
           payload['division'] = divRaw;
@@ -281,7 +281,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
               final bytes = await file.readAsBytes();
 
               // เริ่มจากเดิมชื่อไฟล์จาก client (อาจเป็นชื่อที่ browser/OS ให้มา)
-              final origName = file.name ?? 'image';
+              final origName = file.name;
 
               // ระบุ content-type ของไฟล์ โดยดูจากนามสกุลถ้ามี
               String mimeType = 'image/jpeg';

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field, unused_element
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -88,7 +90,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         for (var it in items) {
           if (it.type.isNotEmpty) set.add(it.type);
         }
-        _priorityOptions = ['ทั้งหมด', ...set.toList()];
+        _priorityOptions = ['ทั้งหมด', ...set];
         _hasMoreData = items.length >= _limit;
       });
     });
@@ -1011,7 +1013,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       showCheckboxColumn: false,
-                      headingRowColor: MaterialStateProperty.all(
+                      headingRowColor: WidgetStateProperty.all(
                         const Color(0xFF1976D2).withOpacity(0.1),
                       ),
                       columnSpacing: 28,
@@ -1156,7 +1158,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               });
                             }
                           },
-                          color: MaterialStateProperty.resolveWith<Color?>(
+                          color: WidgetStateProperty.resolveWith<Color?>(
                             (states) => index.isEven
                                 ? Colors.white
                                 : const Color(0xFFF7FAFC),

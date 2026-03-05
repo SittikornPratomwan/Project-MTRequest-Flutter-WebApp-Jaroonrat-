@@ -34,9 +34,9 @@ class _CloseJobButtonState extends State<CloseJobButton> {
       if (resp.statusCode != 200) return null;
       final decoded = jsonDecode(resp.body);
       List<dynamic>? list;
-      if (decoded is List)
+      if (decoded is List) {
         list = decoded;
-      else if (decoded is Map && decoded['data'] is List)
+      } else if (decoded is Map && decoded['data'] is List)
         list = decoded['data'];
       if (list == null || list.isEmpty) return null;
 
@@ -68,10 +68,11 @@ class _CloseJobButtonState extends State<CloseJobButton> {
 
   Future<void> _closeRequest(String? id) async {
     if (id == null || id.isEmpty) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('ไม่พบรหัสคำขอที่ต้องการปิดงาน')),
         );
+      }
       return;
     }
 
@@ -145,18 +146,20 @@ class _CloseJobButtonState extends State<CloseJobButton> {
         debugPrint('Alt complete error: $e');
       }
 
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ไม่สามารถปิดงานได้ (ติดต่อ API ไม่สำเร็จ)'),
           ),
         );
+      }
     } catch (e) {
       debugPrint('Error closing request: $e');
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('เกิดข้อผิดพลาดในการปิดงาน')),
         );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

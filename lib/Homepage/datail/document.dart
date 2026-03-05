@@ -9,7 +9,7 @@ import '../../Authen/authen.dart';
 
 class DocumentPage extends StatefulWidget {
   final PurchaseItem item;
-  const DocumentPage({Key? key, required this.item}) : super(key: key);
+  const DocumentPage({super.key, required this.item});
 
   @override
   State<DocumentPage> createState() => _DocumentPageState();
@@ -104,8 +104,9 @@ class _DocumentPageState extends State<DocumentPage> {
             for (final step in decoded['steps'] as List) {
               if (step is Map && step['approvers'] is List) {
                 for (final a in step['approvers']) {
-                  if (a is Map)
+                  if (a is Map) {
                     a['step_state'] = step['state']?.toString() ?? '';
+                  }
                   list.add(a);
                 }
               }
@@ -175,25 +176,27 @@ class _DocumentPageState extends State<DocumentPage> {
         .toString();
     final reqDate = (raw['created_at'] ?? raw['createdAt'] ?? item.reqDate)
         .toString();
+    final topic = (raw['topic'] ?? raw['description'] ?? item.topic ?? '')
+      .toString();
+
+    // helper used in PDF layout (defined here so build can be a simple expression)
+    pw.Widget dotField(String val) => pw.Expanded(
+          child: pw.Container(
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(style: pw.BorderStyle.dashed),
+              ),
+            ),
+            child: pw.Text(val, style: pw.TextStyle(fontSize: 11)),
+          ),
+        );
 
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(24),
-        build: (pw.Context ctx) {
-          // helper: dotted underline cell
-          pw.Widget dotField(String val) => pw.Expanded(
-            child: pw.Container(
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  bottom: pw.BorderSide(style: pw.BorderStyle.dashed),
-                ),
-              ),
-              child: pw.Text(val, style: pw.TextStyle(fontSize: 11)),
-            ),
-          );
-
-          return pw.Column(
+        build: (pw.Context ctx) => [
+          pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               // Header
@@ -369,7 +372,7 @@ class _DocumentPageState extends State<DocumentPage> {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text(item.topic, style: pw.TextStyle(fontSize: 10)),
+                        pw.Text(topic, style: pw.TextStyle(fontSize: 10)),
                         pw.SizedBox(height: 6),
                         ...List.generate(
                           6,
@@ -510,15 +513,17 @@ class _DocumentPageState extends State<DocumentPage> {
                 ],
               ),
             ],
-          );
-        },
+          ),
+        ],
       ),
     );
 
-    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+    await Printing.layoutPdf(
+      format: PdfPageFormat.a4,
+      onLayout: (format) async => pdf.save(),
+    );
   }
 
-  // â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
@@ -566,7 +571,7 @@ class _DocumentPageState extends State<DocumentPage> {
                     child: Column(
                       children: const [
                         Text(
-                          'บริษัท โรงงานผลิต จำกัด',
+                          'บริษัทจรูญรัตน์ โปรดักส์ จำกัด',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -574,7 +579,7 @@ class _DocumentPageState extends State<DocumentPage> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'ฝ่ายซ่อม - บริการ',
+                          'ใบแจ้งซ่อม-สร้าง',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
