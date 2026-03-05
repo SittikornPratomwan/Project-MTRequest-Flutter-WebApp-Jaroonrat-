@@ -151,6 +151,20 @@ class _DocumentPageState extends State<DocumentPage> {
         'rejected',
       );
 
+  String _formatDateString(String raw) {
+    if (raw.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(raw);
+      String two(int v) => v.toString().padLeft(2, '0');
+      return '${two(dt.day)}/${two(dt.month)}/${dt.year}';
+    } catch (_) {
+      // try extracting date portion if already like 'YYYY-MM-DD...'
+      final m = RegExp(r'(\d{4})-(\d{2})-(\d{2})').firstMatch(raw);
+      if (m != null) return '${m.group(3)}/${m.group(2)}/${m.group(1)}';
+      return raw;
+    }
+  }
+
   Future<void> _printDocument() async {
     final pdf = pw.Document();
     final item = widget.item;
@@ -158,6 +172,8 @@ class _DocumentPageState extends State<DocumentPage> {
     final requester = (raw['username'] ?? raw['user_name'] ?? item.reqBy)
         .toString();
     final dept = (raw['department_name'] ?? raw['department'] ?? item.dept)
+        .toString();
+    final reqDate = (raw['created_at'] ?? raw['createdAt'] ?? item.reqDate)
         .toString();
 
     pdf.addPage(
@@ -286,7 +302,7 @@ class _DocumentPageState extends State<DocumentPage> {
                       fontSize: 10,
                     ),
                   ),
-                  dotField(item.reqDate),
+                  dotField(_formatDateString(reqDate)),
                   pw.SizedBox(width: 12),
                   pw.Text(
                     'กำหนดเสร็จภายในวันที่  ',
@@ -511,6 +527,8 @@ class _DocumentPageState extends State<DocumentPage> {
         .toString();
     final dept = (raw['department_name'] ?? raw['department'] ?? item.dept)
         .toString();
+    final reqDate = (raw['created_at'] ?? raw['createdAt'] ?? item.reqDate)
+        .toString();
     const Color blue = Color(0xFF1976D2);
 
     return Scaffold(
@@ -620,7 +638,7 @@ class _DocumentPageState extends State<DocumentPage> {
                         _arrowSep(),
                         _diamondStatus('ซ่อม', item.type.contains('ซ่อม')),
                         _arrowSep(),
-                        _diamondStatus('สำเร็จ', item.type.contains('สำเร็จ')),
+                        _diamondStatus('สั่งทำ', item.type.contains('สั่งทำ ')),
                       ],
                     ),
                   ),
@@ -653,7 +671,7 @@ class _DocumentPageState extends State<DocumentPage> {
                     'วันที่ส่งคำขอ  ',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
-                  Expanded(child: _dotField(item.reqDate)),
+                  Expanded(child: _dotField(_formatDateString(reqDate))),
                   const SizedBox(width: 16),
                   const Text(
                     'กำหนดเสร็จภายในวันที่  ',
@@ -996,4 +1014,3 @@ class _DocumentPageState extends State<DocumentPage> {
     ],
   );
 }
-
