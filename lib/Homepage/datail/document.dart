@@ -1,18 +1,999 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:printing/printing.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import 'detail.dart';
+import '../../Authen/authen.dart';
 
-class DocumentPage extends StatelessWidget {
-  const DocumentPage({Key? key}) : super(key: key);
+class DocumentPage extends StatefulWidget {
+  final PurchaseItem item;
+  const DocumentPage({Key? key, required this.item}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('เอกสาร'),
-        backgroundColor: const Color(0xFF1976D2),
+  State<DocumentPage> createState() => _DocumentPageState();
+}
+
+class _DocumentPageState extends State<DocumentPage> {
+  final String _baseHost = 'http://26.99.205.41:9000/drugs';
+
+  List<String> _fileUrls = [];
+  bool _loadingFiles = false;
+
+  List<dynamic> _approvers = [];
+  bool _loadingApprovers = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFiles();
+    _fetchApprovers();
+  }
+
+  Map<String, String> _authHeaders() {
+    final h = <String, String>{};
+    if (Authen.token != null && Authen.token!.isNotEmpty) {
+      h['Authorization'] = 'Bearer ${Authen.token}';
+    }
+    return h;
+  }
+
+  Future<void> _fetchFiles() async {
+    final id = widget.item.id;
+    if (id.isEmpty) return;
+    setState(() => _loadingFiles = true);
+    try {
+      final resp = await http
+          .get(
+            Uri.parse('$_baseHost/repair-requests/$id/files'),
+            headers: _authHeaders(),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        List<dynamic>? list;
+        if (decoded is List) {
+          list = decoded;
+        } else if (decoded is Map) {
+          list =
+              (decoded['value'] ?? decoded['data'] ?? decoded['files'])
+                  as List?;
+        }
+        final urls = <String>[];
+        for (final item in (list ?? [])) {
+          if (item is String) {
+            urls.add(_normalizeUrl(item));
+          } else if (item is Map) {
+            for (final k in ['file_url', 'url', 'path', 'file', 'filename']) {
+              if (item[k] != null) {
+                urls.add(_normalizeUrl(item[k].toString()));
+                break;
+              }
+            }
+          }
+        }
+        if (mounted) setState(() => _fileUrls = urls);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loadingFiles = false);
+    }
+  }
+
+  Future<void> _fetchApprovers() async {
+    final id = widget.item.id;
+    if (id.isEmpty) return;
+    setState(() => _loadingApprovers = true);
+    try {
+      final resp = await http
+          .get(
+            Uri.parse('$_baseHost/repair-requests/$id/approval-steps'),
+            headers: _authHeaders(),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final decoded = jsonDecode(resp.body);
+        List<dynamic> list = [];
+        if (decoded is List) {
+          list = decoded;
+        } else if (decoded is Map) {
+          if (decoded['approval_steps'] is List) {
+            list = decoded['approval_steps'];
+          } else if (decoded['steps'] is List) {
+            for (final step in decoded['steps'] as List) {
+              if (step is Map && step['approvers'] is List) {
+                for (final a in step['approvers']) {
+                  if (a is Map)
+                    a['step_state'] = step['state']?.toString() ?? '';
+                  list.add(a);
+                }
+              }
+            }
+          } else if (decoded['data'] is List) {
+            list = decoded['data'];
+          }
+        }
+        if (mounted) setState(() => _approvers = list);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loadingApprovers = false);
+    }
+  }
+
+  String _normalizeUrl(String raw) {
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('/')) return '$_baseHost$raw';
+    return '$_baseHost/$raw';
+  }
+
+  String _extractUsername(dynamic a) {
+    if (a == null) return '-';
+    if (a is String) return a;
+    if (a is Map) {
+      for (final k in ['username', 'user_name', 'name', 'display_name']) {
+        if (a[k] is String && (a[k] as String).isNotEmpty) return a[k];
+      }
+    }
+    return '-';
+  }
+
+  bool _isApproved(dynamic a) =>
+      a['approved'] == true ||
+      (a['status'] ?? a['step_state'] ?? '').toString().toLowerCase().contains(
+        'approved',
+      );
+
+  bool _isRejected(dynamic a) =>
+      a['approved'] == false ||
+      (a['status'] ?? a['step_state'] ?? '').toString().toLowerCase().contains(
+        'rejected',
+      );
+
+  Future<void> _printDocument() async {
+    final pdf = pw.Document();
+    final item = widget.item;
+    final raw = item.rawData ?? {};
+    final requester = (raw['username'] ?? raw['user_name'] ?? item.reqBy)
+        .toString();
+    final dept = (raw['department_name'] ?? raw['department'] ?? item.dept)
+        .toString();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (pw.Context ctx) {
+          // helper: dotted underline cell
+          pw.Widget dotField(String val) => pw.Expanded(
+            child: pw.Container(
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(style: pw.BorderStyle.dashed),
+                ),
+              ),
+              child: pw.Text(val, style: pw.TextStyle(fontSize: 11)),
+            ),
+          );
+
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      'บริษัทจรูญรัตน์ โปรดักส์ จำกัด',
+                      style: pw.TextStyle(
+                        fontSize: 15,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'ใบแจ้งซ่อม-สร้าง',
+                      style: pw.TextStyle(
+                        fontSize: 13,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      '(Maintenance Requisition Sheet)',
+                      style: pw.TextStyle(fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text(
+                  'MT No. : ${item.no}',
+                  style: pw.TextStyle(fontSize: 10),
+                ),
+              ),
+              pw.SizedBox(height: 6),
+
+              // ลักษณะงาน
+              pw.Row(
+                children: [
+                  pw.Text(
+                    'ลักษณะงาน  ',
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(width: 8),
+                  pw.Text(
+                    '○ งานซ่อมทั่วไป    ',
+                    style: pw.TextStyle(fontSize: 10),
+                  ),
+                  pw.SizedBox(width: 6),
+                  pw.Text(
+                    '○ งานซ่อม Hanger',
+                    style: pw.TextStyle(fontSize: 10),
+                  ),
+                  pw.Spacer(),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(style: pw.BorderStyle.dashed),
+                    ),
+                    child: pw.Text(
+                      '◇ สร้าง   ◇ ซ่อม   ◇ สำเร็จ',
+                      style: pw.TextStyle(fontSize: 9),
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 6),
+
+              // ผู้ร้อง / แผนก
+              pw.Row(
+                children: [
+                  pw.Text(
+                    'ผู้ร้อง/ผู้ส่งคำขอ  ',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                  dotField(requester),
+                  pw.SizedBox(width: 12),
+                  pw.Text(
+                    'แผนก  ',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                  dotField(dept),
+                ],
+              ),
+              pw.SizedBox(height: 4),
+
+              // วันที่ / กำหนด
+              pw.Row(
+                children: [
+                  pw.Text(
+                    'วันที่ส่งคำขอ  ',
+                    style: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                  dotField(item.reqDate),
+                  pw.SizedBox(width: 12),
+                  pw.Text(
+                    'กำหนดเสร็จภายในวันที่  ',
+                    style: pw.TextStyle(fontSize: 10),
+                  ),
+                  dotField(item.prDate),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+
+              // หัวข้อรายการ
+              pw.Center(
+                child: pw.Text(
+                  'รายการรายละเอียดของงาน',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 11,
+                    decoration: pw.TextDecoration.underline,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 6),
+
+              // 2-Column Layout
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    flex: 4,
+                    child: pw.Container(
+                      decoration: pw.BoxDecoration(border: pw.Border.all()),
+                      padding: const pw.EdgeInsets.all(4),
+                      child: pw.Column(
+                        children: [
+                          pw.Text(
+                            'ภาพประกอบ',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 10,
+                              decoration: pw.TextDecoration.underline,
+                            ),
+                          ),
+                          pw.SizedBox(height: 6),
+                          pw.Container(
+                            height: 120,
+                            color: PdfColors.grey200,
+                            child: pw.Center(
+                              child: pw.Text(
+                                '(รูปภาพประกอบ)',
+                                style: pw.TextStyle(
+                                  fontSize: 9,
+                                  color: PdfColors.grey600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 8),
+                  pw.Expanded(
+                    flex: 6,
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(item.topic, style: pw.TextStyle(fontSize: 10)),
+                        pw.SizedBox(height: 6),
+                        ...List.generate(
+                          6,
+                          (_) => pw.Column(
+                            children: [
+                              pw.Container(
+                                height: 14,
+                                decoration: const pw.BoxDecoration(
+                                  border: pw.Border(
+                                    bottom: pw.BorderSide(
+                                      style: pw.BorderStyle.dashed,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              pw.SizedBox(height: 2),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 10),
+
+              // Approval Table
+              pw.Table(
+                border: pw.TableBorder.all(width: 0.5),
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(2),
+                  1: const pw.FlexColumnWidth(2.5),
+                  2: const pw.FlexColumnWidth(2),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.grey200,
+                    ),
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Fac.Mgr.',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Fac.Mgr./MKTDir./HR.Dir.',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Center(
+                          child: pw.Text(
+                            'Div.Mgr./Line Mgr.',
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.TableRow(
+                    children: List.generate(3, (i) {
+                      final name = i < _approvers.length
+                          ? _extractUsername(_approvers[i])
+                          : '';
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 4,
+                        ),
+                        child: pw.Center(
+                          child: pw.Text(
+                            name,
+                            style: pw.TextStyle(fontSize: 9),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  pw.TableRow(
+                    children: List.generate(3, (i) {
+                      final a = i < _approvers.length ? _approvers[i] : null;
+                      final approved = a != null ? _isApproved(a) : false;
+                      final rejected = a != null ? _isRejected(a) : false;
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Row(
+                              children: [
+                                pw.Text(
+                                  approved ? '● ' : '○ ',
+                                  style: pw.TextStyle(fontSize: 10),
+                                ),
+                                pw.Text(
+                                  'อนุมัติ',
+                                  style: pw.TextStyle(fontSize: 9),
+                                ),
+                              ],
+                            ),
+                            pw.SizedBox(height: 2),
+                            pw.Row(
+                              children: [
+                                pw.Text(
+                                  rejected ? '● ' : '○ ',
+                                  style: pw.TextStyle(fontSize: 10),
+                                ),
+                                pw.Text(
+                                  'ไม่อนุมัติ',
+                                  style: pw.TextStyle(fontSize: 9),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
-      body: const Center(
-        child: Text('หน้านี้สำหรับแสดงเอกสาร', style: TextStyle(fontSize: 16)),
+    );
+
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
+
+  // â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    final raw = item.rawData ?? {};
+    final requester = (raw['username'] ?? raw['user_name'] ?? item.reqBy)
+        .toString();
+    final dept = (raw['department_name'] ?? raw['department'] ?? item.dept)
+        .toString();
+    const Color blue = Color(0xFF1976D2);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F0F0),
+      appBar: AppBar(
+        title: const Text(
+          'เอกสาร',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: blue,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'พิมพ์เอกสาร',
+            onPressed: (_loadingApprovers || _loadingFiles)
+                ? null
+                : _printDocument,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Container(
+          color: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // â”€â”€ Company Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: const [
+                        Text(
+                          'บริษัท โรงงานผลิต จำกัด',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'ฝ่ายซ่อม - บริการ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '(Maintenance Requisition Sheet)',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'MT No. :',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(item.no, style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+              const Divider(thickness: 1.2),
+
+              // â”€â”€ à¸¥à¸±à¸à¸©à¸“à¸°à¸‡à¸²à¸™ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              Row(
+                children: [
+                  const Text(
+                    'ลักษณะงาน',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  const SizedBox(width: 8),
+                  _radioOption(
+                    'งานซ่อมทั่วไป',
+                    !item.type.toLowerCase().contains('hanger'),
+                  ),
+                  const SizedBox(width: 12),
+                  _radioOption(
+                    'งานซ่อม Hanger',
+                    item.type.toLowerCase().contains('hanger'),
+                  ),
+                  const Spacer(),
+                  // Dashed Status Box
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade700, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _diamondStatus('สร้าง', item.type.contains('สร้าง')),
+                        _arrowSep(),
+                        _diamondStatus('ซ่อม', item.type.contains('ซ่อม')),
+                        _arrowSep(),
+                        _diamondStatus('สำเร็จ', item.type.contains('สำเร็จ')),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // â”€â”€ à¸œà¸¹à¹‰à¸ªà¹ˆà¸‡à¸‹à¹ˆà¸­à¸¡ / à¹à¸œà¸™à¸ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              Row(
+                children: [
+                  const Text(
+                    'ผู้ร้อง/ผู้ส่งคำขอ  ',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  Expanded(child: _dotField(requester)),
+                  const SizedBox(width: 16),
+                  const Text(
+                    'แผนก  ',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  Expanded(child: _dotField(dept)),
+                ],
+              ),
+              const SizedBox(height: 6),
+
+              // â”€â”€ à¸§à¸±à¸™à¸—à¸µà¹ˆ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              Row(
+                children: [
+                  const Text(
+                    'วันที่ส่งคำขอ  ',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                  Expanded(child: _dotField(item.reqDate)),
+                  const SizedBox(width: 16),
+                  const Text(
+                    'กำหนดเสร็จภายในวันที่  ',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  Expanded(child: _dotField(item.prDate)),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // â”€â”€ à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸‚à¸­à¸‡à¸‡à¸²à¸™ title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              Center(
+                child: Text(
+                  'รายการรายละเอียดของงาน',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    decoration: TextDecoration.underline,
+                    color: blue,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // â”€â”€ 2-Column Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Left: à¸ à¸²à¸žà¸›à¸£à¸°à¸à¸­à¸š
+                    Expanded(
+                      flex: 4,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: Column(
+                          children: [
+                            Text(
+                              'ภาพประกอบ',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                decoration: TextDecoration.underline,
+                                color: blue,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (_loadingFiles)
+                              const SizedBox(
+                                height: 120,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            else if (_fileUrls.isEmpty)
+                              Container(
+                                height: 120,
+                                color: Colors.grey.shade200,
+                                child: const Center(
+                                  child: Text(
+                                    'à¹„à¸¡à¹ˆà¸¡à¸µà¸ à¸²à¸ž',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ),
+                              )
+                            else
+                              Column(
+                                children: _fileUrls
+                                    .map(
+                                      (url) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        child: GestureDetector(
+                                          onTap: () =>
+                                              _showFullImage(context, url),
+                                          child: Image.network(
+                                            url,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
+                                                  Icons.broken_image,
+                                                  size: 60,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Right: description + dotted lines
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.topic,
+                            style: const TextStyle(fontSize: 12, height: 1.6),
+                          ),
+                          const SizedBox(height: 6),
+                          ...List.generate(8, (_) => _dottedLine()),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // â”€â”€ Approval Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              Table(
+                border: TableBorder.all(color: Colors.grey.shade500),
+                columnWidths: const {
+                  0: FlexColumnWidth(2),
+                  1: FlexColumnWidth(2.5),
+                  2: FlexColumnWidth(2),
+                },
+                children: [
+                  // Role headers
+                  TableRow(
+                    decoration: BoxDecoration(color: Colors.grey.shade200),
+                    children: [
+                      _roleHeader('Fac.Mgr.'),
+                      _roleHeader('Fac.Mgr./MKTDir./HR.Dir.'),
+                      _roleHeader('Div.Mgr./Line Mgr.'),
+                    ],
+                  ),
+                  // Approver names
+                  TableRow(
+                    children: List.generate(3, (i) {
+                      final name = i < _approvers.length
+                          ? _extractUsername(_approvers[i])
+                          : '';
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 4,
+                        ),
+                        child: Center(
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  // à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´ / à¹„à¸¡à¹ˆà¸­à¸™à¸¸à¸¡à¸±à¸•à¸´
+                  TableRow(
+                    children: List.generate(3, (i) {
+                      final a = i < _approvers.length ? _approvers[i] : null;
+                      final approved = a != null && _isApproved(a);
+                      final rejected = a != null && _isRejected(a);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 8,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _approvalRadio('อนุมัติ', approved),
+                            const SizedBox(height: 4),
+                            _approvalRadio('ไม่อนุมัติ', rejected),
+                          ],
+                        ),
+                      );
+                    }),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: (_loadingApprovers || _loadingFiles) ? null : _printDocument,
+        backgroundColor: blue,
+        icon: const Icon(Icons.print, color: Colors.white),
+        label: const Text(
+          'พิมพ์เอกสาร',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
+
+  void _showFullImage(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: InteractiveViewer(
+            maxScale: 5.0,
+            child: Image.network(
+              url,
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.broken_image, size: 64),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // â”€â”€ Helper Widgets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+  /// à¸§à¸‡à¸à¸¥à¸¡ radio + label
+  Widget _radioOption(String label, bool selected) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        size: 17,
+        color: selected ? const Color(0xFF1976D2) : Colors.grey.shade600,
+      ),
+      const SizedBox(width: 3),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
+
+  /// ◇ Diamond shape + label (à¹€à¸«à¸¡à¸·à¸­à¸™à¹ƒà¸™à¸£à¸¹à¸›)
+  Widget _diamondStatus(String label, bool active) {
+    const blue = Color(0xFF1976D2);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Hexagon/arrow shape approximated with rotated square
+        Transform.rotate(
+          angle: 0.785,
+          child: Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              border: Border.all(
+                width: 1.5,
+                color: active ? blue : Colors.grey.shade500,
+              ),
+              color: active ? blue.withOpacity(0.15) : Colors.transparent,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: active ? FontWeight.bold : FontWeight.normal,
+            color: active ? blue : Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// à¸¥à¸¹à¸à¸¨à¸£à¸„à¸±à¹ˆà¸™à¸£à¸°à¸«à¸§à¹ˆà¸²à¸‡ status
+  Widget _arrowSep() => const Padding(
+    padding: EdgeInsets.symmetric(horizontal: 4),
+    child: Text('›', style: TextStyle(fontSize: 16, color: Colors.grey)),
+  );
+
+  /// field à¹à¸šà¸šà¸¡à¸µà¹€à¸ªà¹‰à¸™à¸ˆà¸¸à¸”à¸”à¹‰à¸²à¸™à¸¥à¹ˆà¸²à¸‡
+  Widget _dotField(String value) => Container(
+    margin: const EdgeInsets.only(bottom: 2),
+    decoration: const BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: Colors.black54,
+          width: 0.8,
+          style: BorderStyle.solid,
+        ),
+      ),
+    ),
+    padding: const EdgeInsets.only(bottom: 2),
+    child: Text(
+      value,
+      style: const TextStyle(fontSize: 12),
+      overflow: TextOverflow.ellipsis,
+    ),
+  );
+
+  /// à¹€à¸ªà¹‰à¸™ dotted à¸ªà¸³à¸«à¸£à¸±à¸šà¸Šà¹ˆà¸­à¸‡à¹€à¸‚à¸µà¸¢à¸™
+  Widget _dottedLine() => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(
+      children: List.generate(
+        60,
+        (_) => Expanded(
+          child: Container(
+            height: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            color: Colors.grey.shade400,
+          ),
+        ),
+      ),
+    ),
+  );
+
+  /// Header cell à¸•à¸²à¸£à¸²à¸‡ approval
+  Widget _roleHeader(String text) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+    child: Center(
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+    ),
+  );
+
+  /// Radio à¸§à¸‡à¸à¸¥à¸¡à¸ªà¸³à¸«à¸£à¸±à¸šà¹à¸–à¸§à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´
+  Widget _approvalRadio(String label, bool selected) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        size: 16,
+        color: selected
+            ? (label == 'อนุมัติ' ? Colors.green : Colors.red)
+            : Colors.grey.shade500,
+      ),
+      const SizedBox(width: 4),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
 }
+

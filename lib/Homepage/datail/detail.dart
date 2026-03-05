@@ -1708,7 +1708,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const DocumentPage(),
+                        builder: (context) => DocumentPage(item: displayItem),
                       ),
                     );
                   },
