@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../Authen/authen.dart';
@@ -30,19 +31,111 @@ Future<Map<String, dynamic>?> showRemarkDialog(
     if (comment.isEmpty || repairRequestId == null) return;
 
     try {
+      // If there are images selected, upload them first and collect attachment paths.
+      final baseHost = 'http://26.99.205.41:9000/drugs';
+      final List<String> attachments = [];
+      if (images.isNotEmpty) {
+        final uriUpload = Uri.parse(
+          '$baseHost/repair-requests/$repairRequestId/files',
+        );
+        final req = http.MultipartRequest('POST', uriUpload);
+        if (Authen.token != null && Authen.token!.isNotEmpty) {
+          req.headers['Authorization'] = 'Bearer ${Authen.token}';
+        }
+
+        for (var i = 0; i < images.length; i++) {
+          final bytes = images[i];
+          final filename = '${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+          req.files.add(
+            http.MultipartFile.fromBytes(
+              'files',
+              bytes,
+              filename: filename,
+              contentType: MediaType('image', 'jpeg'),
+            ),
+          );
+        }
+
+        final streamed = await req.send().timeout(const Duration(seconds: 20));
+        final respStr = await streamed.stream.bytesToString();
+        if (streamed.statusCode == 200 || streamed.statusCode == 201) {
+          try {
+            final decoded = jsonDecode(respStr);
+            // decoded may be List or Map; try common keys
+            if (decoded is List) {
+              for (final e in decoded) {
+                if (e is String)
+                  attachments.add(e);
+                else if (e is Map) {
+                  attachments.add(
+                    e['file']?.toString() ?? e['path']?.toString() ?? '',
+                  );
+                }
+              }
+            } else if (decoded is Map) {
+              if (decoded['files'] is List) {
+                for (final e in decoded['files']) {
+                  if (e is String)
+                    attachments.add(e);
+                  else if (e is Map)
+                    attachments.add(
+                      e['file']?.toString() ?? e['path']?.toString() ?? '',
+                    );
+                }
+              } else if (decoded['attachments'] is List) {
+                for (final e in decoded['attachments']) {
+                  if (e is String) attachments.add(e);
+                }
+              } else if (decoded['data'] is Map) {
+                // try nested
+                final d = decoded['data'];
+                if (d['files'] is List) {
+                  for (final e in d['files']) {
+                    if (e is String)
+                      attachments.add(e);
+                    else if (e is Map)
+                      attachments.add(
+                        e['file']?.toString() ?? e['path']?.toString() ?? '',
+                      );
+                  }
+                }
+              }
+            }
+          } catch (_) {
+            // ignore JSON parse errors; fallback to generated names
+          }
+
+          // If server didn't return paths, fallback to guessed upload paths
+          if (attachments.isEmpty) {
+            for (var i = 0; i < images.length; i++) {
+              attachments.add(
+                'uploads/${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
+              );
+            }
+          }
+        } else {
+          if (kDebugMode)
+            debugPrint('Upload files failed: ${streamed.statusCode} $respStr');
+        }
+      }
+
+      // Now post the comment with attachments array
       final uri = Uri.parse(
-        'http://26.99.205.41:9000/drugs/repair-requests/$repairRequestId/comments',
+        '$baseHost/repair-requests/$repairRequestId/comments',
       );
       final headers = {'Content-Type': 'application/json'};
       if (Authen.token != null && Authen.token!.isNotEmpty) {
         headers['Authorization'] = 'Bearer ${Authen.token}';
       }
+
+      final body = <String, dynamic>{
+        'user_id': Authen.requesterId ?? 0,
+        'comment': comment,
+      };
+      if (attachments.isNotEmpty) body['attachments'] = attachments;
+
       final response = await http
-          .post(
-            uri,
-            headers: headers,
-            body: jsonEncode({'user_id': 2, 'comment': comment}),
-          )
+          .post(uri, headers: headers, body: jsonEncode(body))
           .timeout(const Duration(seconds: 10));
 
       if (kDebugMode) {
