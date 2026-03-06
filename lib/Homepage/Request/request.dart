@@ -449,118 +449,8 @@ class _RequestFormPageState extends State<RequestFormPage> {
             // Priority Section (เก็บลง API)
             // ------------------------------------------------
             const SizedBox(height: 10),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'Priority :',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D3748),
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildRadioRow(
-                        'ด่วน',
-                        'กรณีที่ต้องทำให้เสร็จภายใน 3 วัน',
-                        Colors.red,
-                      ),
-                      _buildRadioRow(
-                        'ปกติ',
-                        'กรณีที่ต้องทำให้เสร็จภายใน 7 วัน',
-                        Colors.red,
-                      ),
-                      _buildRadioRow(
-                        'โครงการ',
-                        'กรณีที่ต้องใช้ระยะเวลา... ให้กำหนดวันที่ต้องการให้เหมาะสม',
-                        Colors.red,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // ------------------------------------------------
-            // Request Date
-            // ------------------------------------------------
             const SizedBox(height: 10),
-            Row(
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'Request :',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D3748),
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                Text(
-                  _formatThaiDate(_requestDate),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3748),
-                  ),
-                ),
-                const SizedBox(width: 5),
-                const Text(
-                  '(วันที่ร้องขอ)',
-                  style: TextStyle(
-                    color: Color(0xFF1976D2),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-
-            // ------------------------------------------------
-            // Topic and Description
-            // ------------------------------------------------
-            const SizedBox(height: 10),
-            _buildTextFieldRow(label: 'หัวข้อ :', controller: _titleController),
-            const SizedBox(height: 8),
-            Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey),
-              ),
-              child: Column(
-                children: [
-                  // Text Area
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: _descriptionController,
-                        maxLines: null,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'รายละเอียด',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-            // ------------------------------------------------
-            // Category & Characteristic dropdowns (show Thai, send numeric id)
-            // ------------------------------------------------
-            const SizedBox(height: 6),
+            // Move Category & Characteristic selectors above the topic/title
             Row(
               children: [
                 const SizedBox(
@@ -636,6 +526,74 @@ class _RequestFormPageState extends State<RequestFormPage> {
                 ),
               ],
             ),
+            // ------------------------------------------------
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const SizedBox(
+                  width: 100,
+                  child: Text(
+                    'Request :',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2D3748),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatThaiDate(_requestDate),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3748),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                const Text(
+                  '(วันที่ร้องขอ)',
+                  style: TextStyle(
+                    color: Color(0xFF1976D2),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+
+            // ------------------------------------------------
+            // Topic and Description
+            // ------------------------------------------------
+            const SizedBox(height: 10),
+
+            _buildTextFieldRow(label: 'หัวข้อ :', controller: _titleController),
+            const SizedBox(height: 8),
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: Colors.grey),
+              ),
+              child: Column(
+                children: [
+                  // Text Area
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: _descriptionController,
+                        maxLines: null,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'รายละเอียด',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
             const Text(
               'แนบรูป / ไฟล์ (สูงสุด 5)',
               style: TextStyle(fontWeight: FontWeight.bold),

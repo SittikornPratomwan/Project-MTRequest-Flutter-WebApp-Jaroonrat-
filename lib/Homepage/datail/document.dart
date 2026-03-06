@@ -1011,20 +1011,11 @@ class _DocumentPageState extends State<DocumentPage> {
     ),
   );
 
-  Widget _dottedLine() => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Row(
-      children: List.generate(
-        60,
-        (_) => Expanded(
-          child: Container(
-            height: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 1),
-            color: Colors.grey.shade400,
-          ),
-        ),
-      ),
-    ),
+  // Previously rendered many '.' characters across the line.
+  // Now render a simple empty spacer (no visible dots).
+  Widget _dottedLine() => const Padding(
+    padding: EdgeInsets.only(bottom: 6),
+    child: SizedBox(height: 14),
   );
 
   /// Header cell for approval
