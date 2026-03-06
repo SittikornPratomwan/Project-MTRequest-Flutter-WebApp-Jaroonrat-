@@ -611,6 +611,101 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           }
         }
 
+        // Normalize/collect attachments (images/files) for each comment so UI can display them.
+        List<String> _collectImageStrings(dynamic node) {
+          final exts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+          final out = <String>[];
+          void walk(dynamic n) {
+            if (n == null) return;
+            if (n is String) {
+              final low = n.toLowerCase();
+              for (final e in exts) {
+                if (low.contains(e)) {
+                  out.add(n);
+                  return;
+                }
+              }
+              if (low.startsWith('http')) out.add(n);
+              return;
+            }
+            if (n is Map) {
+              for (final v in n.values) walk(v);
+              return;
+            }
+            if (n is List) {
+              for (final v in n) walk(v);
+              return;
+            }
+          }
+
+          walk(node);
+          return out;
+        }
+
+        for (var i = 0; i < commentList.length; i++) {
+          final c = commentList[i];
+          final attachments = <String>[];
+          if (c is Map) {
+            // Common keys containing attachments
+            final keys = ['attachments', 'files', 'images', 'media'];
+            for (final k in keys) {
+              if (c[k] is List) {
+                for (final e in c[k]) {
+                  if (e is String && e.isNotEmpty)
+                    attachments.add(e);
+                  else if (e is Map) {
+                    for (final cand in [
+                      'file',
+                      'path',
+                      'url',
+                      'src',
+                      'location',
+                    ]) {
+                      if (e[cand] != null) {
+                        attachments.add(e[cand].toString());
+                        break;
+                      }
+                    }
+                  }
+                }
+              } else if (c[k] is String) {
+                final s = c[k] as String;
+                if (s.contains(',')) {
+                  attachments.addAll(
+                    s
+                        .split(',')
+                        .map((e) => e.trim())
+                        .where((e) => e.isNotEmpty),
+                  );
+                } else if (s.isNotEmpty) {
+                  attachments.add(s);
+                }
+              }
+            }
+
+            // If not found via common keys, try to collect any image-like strings inside the comment object
+            if (attachments.isEmpty) {
+              final found = _collectImageStrings(c);
+              attachments.addAll(found);
+            }
+
+            // Normalize URLs/paths and remove empties/duplicates
+            final normalized = <String>[];
+            for (final a in attachments) {
+              if (a == null) continue;
+              final s = a.toString();
+              if (s.isEmpty) continue;
+              final url = _normalizeUrl(s);
+              if (!normalized.contains(url)) normalized.add(url);
+            }
+
+            // attach to comment map for UI usage
+            try {
+              c['attachments'] = normalized;
+            } catch (_) {}
+          }
+        }
+
         if (mounted) {
           setState(() {
             _comments = commentList;
@@ -1593,6 +1688,54 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                   color: valueColor,
                                   height: 1.5,
                                 ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Display attachments (thumbnails) if any
+                              Builder(
+                                builder: (cxt) {
+                                  final atts = (comment['attachments'] is List)
+                                      ? (comment['attachments'] as List)
+                                            .map((e) => e.toString())
+                                            .where((s) => s.isNotEmpty)
+                                            .toList()
+                                      : <String>[];
+                                  if (atts.isEmpty) return const SizedBox();
+                                  return SizedBox(
+                                    height: 90,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: atts.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(width: 8),
+                                      itemBuilder: (ctx, ai) {
+                                        final url = _normalizeUrl(atts[ai]);
+                                        return GestureDetector(
+                                          onTap: () =>
+                                              _showFullImage(context, url),
+                                          child: Container(
+                                            width: 120,
+                                            height: 90,
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: Colors.grey[300]!,
+                                              ),
+                                            ),
+                                            child: Image.network(
+                                              url,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  const Center(
+                                                    child: Icon(
+                                                      Icons.broken_image,
+                                                    ),
+                                                  ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
                               ),
                             ],
                           ),
