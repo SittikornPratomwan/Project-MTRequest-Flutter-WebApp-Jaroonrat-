@@ -1068,6 +1068,19 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     final bool isPhaseOne =
         phaseRaw != null &&
         (phaseRaw.toString() == '1' || (phaseRaw is int && phaseRaw == 1));
+    // Determine workflow step order; show delete only when step_order == 1
+    final dynamic stepOrderRaw =
+        raw['current_step_order'] ??
+        raw['currentStepOrder'] ??
+        raw['step_order'] ??
+        raw['stepOrder'];
+    final bool isStepOne =
+        stepOrderRaw != null &&
+        (stepOrderRaw.toString() == '1' ||
+            (stepOrderRaw is int && stepOrderRaw == 1));
+    // If API reports waiting-for-acceptance, map to 'รอตรวจสอบ' and hide close button
+    final String statusLabelNormalized = statusLabelRaw.trim();
+    final bool waitingForInspection = statusLabelNormalized == 'รอตรวจรับงาน';
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -1354,11 +1367,13 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 Text(
                   overallRejected
                       ? 'ไม่อนุมัติ'
-                      : (raw['status_label'] ??
-                                    raw['statusLabel'] ??
-                                    displayItem.status)
-                                ?.toString() ??
-                            displayItem.status,
+                      : (waitingForInspection
+                            ? 'รอตรวจสอบ'
+                            : (raw['status_label'] ??
+                                          raw['statusLabel'] ??
+                                          displayItem.status)
+                                      ?.toString() ??
+                                  displayItem.status),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: overallRejected
@@ -1842,7 +1857,10 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (_canCurrentUserDelete(displayItem)) ...[
+                if (_canCurrentUserDelete(displayItem) &&
+                    !waitingForInspection &&
+                    isPhaseOne &&
+                    isStepOne) ...[
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
@@ -1860,9 +1878,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   ),
                   const SizedBox(width: 12),
                 ],
-                // Hide CloseJobButton when overall status_label indicates rejection
-                // or when the workflow is in phase 1
-                if (!overallRejected && !isPhaseOne) ...[
+                // Hide CloseJobButton when overall status_label indicates rejection,
+                // when the workflow is in phase 1, or when waiting for inspection
+                if (!overallRejected &&
+                    !isPhaseOne &&
+                    !waitingForInspection) ...[
                   CloseJobButton(item: displayItem),
                   const SizedBox(width: 12),
                 ],

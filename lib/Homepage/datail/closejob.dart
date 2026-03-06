@@ -77,12 +77,38 @@ class _CloseJobButtonState extends State<CloseJobButton> {
     }
 
     setState(() => _loading = true);
+    // Prefer technician-finish endpoint used by technicians
+    final uriTechFinish = Uri.parse(
+      '$_baseHost/repair-requests/$id/technician-finish',
+    );
     final uriPrimary = Uri.parse('$_baseHost/repair-requests/$id/close');
     final uriAlt = Uri.parse('$_baseHost/repair-requests/$id/complete');
     final headers = _authHeaders(json: true);
     final body = jsonEncode({'closed': true});
 
     try {
+      // 0) Try technician-finish (PATCH)
+      try {
+        final respTech = await http
+            .patch(uriTechFinish, headers: headers, body: body)
+            .timeout(const Duration(seconds: 10));
+        debugPrint(
+          'PATCH technician-finish -> ${respTech.statusCode} ${respTech.body}',
+        );
+        if (respTech.statusCode == 200 ||
+            respTech.statusCode == 201 ||
+            respTech.statusCode == 204) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('ส่งงานเรียบร้อยแล้ว')),
+            );
+            Navigator.of(context).pop(true);
+          }
+          return;
+        }
+      } catch (e) {
+        debugPrint('Technician-finish PATCH error: $e');
+      }
       // Try PATCH
       try {
         final resp = await http
@@ -197,7 +223,7 @@ class _CloseJobButtonState extends State<CloseJobButton> {
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(true),
-                        child: const Text('ปิดงาน'),
+                        child: const Text('ส่งงาน'),
                       ),
                     ],
                   ),
@@ -230,7 +256,7 @@ class _CloseJobButtonState extends State<CloseJobButton> {
                 ),
               )
             : const Text(
-                'ปิดงาน',
+                'ส่งงาน',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
       ),
