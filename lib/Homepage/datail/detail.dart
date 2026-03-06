@@ -1810,139 +1810,30 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
             const SizedBox(height: 12),
 
-            // Determine whether current user is the creator and no approver has approved yet
-            Builder(
-              builder: (context) {
-                final loggedUserId = Authen.requesterId?.toString();
-                String? creatorId;
-                // try common keys in raw data
-                final creatorCandidates = [
-                  'user_id',
-                  'requester_id',
-                  'created_by',
-                  'created_by_id',
-                  'owner_id',
-                  'requesterId',
-                  'creator_id',
-                  'creator',
-                ];
-                for (final k in creatorCandidates) {
-                  final v = raw[k];
-                  if (v == null) continue;
-                  if (v is Map) {
-                    if (v['id'] != null) {
-                      creatorId = v['id'].toString();
-                      break;
-                    }
-                  } else {
-                    creatorId = v.toString();
-                    break;
-                  }
-                }
+            // Delete button will be shown next to CloseJobButton below
 
-                // fallback: sometimes displayItem.reqBy holds a numeric id string
-                if (creatorId == null) {
-                  try {
-                    final maybe = int.tryParse(displayItem.reqBy);
-                    if (maybe != null) creatorId = maybe.toString();
-                  } catch (_) {}
-                }
-
-                bool anyApproved = false;
-                for (final a in _approvers) {
-                  final status =
-                      (a['status'] ??
-                              a['step_state'] ??
-                              a['state'] ??
-                              a['approved'] ??
-                              '')
-                          .toString()
-                          .toLowerCase();
-                  if (status.contains('approved')) {
-                    anyApproved = true;
-                    break;
-                  }
-                  if (a['approved'] == true) {
-                    anyApproved = true;
-                    break;
-                  }
-                  if (a['step_state'] != null &&
-                      a['step_state'].toString().toLowerCase() == 'approved') {
-                    anyApproved = true;
-                    break;
-                  }
-                }
-
-                final canDelete =
-                    loggedUserId != null &&
-                    creatorId != null &&
-                    loggedUserId == creatorId &&
-                    !anyApproved;
-
-                if (!canDelete) return const SizedBox();
-
-                return Center(
-                  child: ElevatedButton(
+            // ปุ่มปิดงาน (ย้ายไปยัง CloseJobButton) + ปุ่มเอกสาร (+ ปุ่มลบเมื่อมีสิทธิ)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_canCurrentUserDelete(displayItem)) ...[
+                  ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         vertical: 12,
-                        horizontal: 24,
+                        horizontal: 20,
                       ),
                     ),
-                    onPressed: () async {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('ยืนยันการลบ'),
-                          content: const Text('ต้องการลบคำขอนี้จริงหรือไม่?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context).pop(false),
-                              child: const Text('ยกเลิก'),
-                            ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                              ),
-                              onPressed: () => Navigator.of(context).pop(true),
-                              child: const Text('ลบ'),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirmed == true) {
-                        String? id = displayItem.id;
-                        if (id.isEmpty) {
-                          final rawData = displayItem.rawData;
-                          if (rawData != null) {
-                            id =
-                                rawData['id']?.toString() ??
-                                rawData['repair_request_id']?.toString();
-                          }
-                        }
-                        if (id == null || id.isEmpty) {
-                          id = await _resolveIdFromList();
-                        }
-                        await _deleteRequest(id);
-                      }
-                    },
+                    onPressed: () => _onDeletePressed(displayItem),
                     child: const Text(
                       'ลบคำขอ',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                );
-              },
-            ),
-
-            // ปุ่มปิดงาน (ย้ายไปยัง CloseJobButton) + ปุ่มเอกสาร
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+                  const SizedBox(width: 12),
+                ],
                 CloseJobButton(item: displayItem),
                 const SizedBox(width: 12),
                 ElevatedButton(
@@ -2069,6 +1960,108 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         ).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการลบ')));
       }
     }
+  }
+
+  bool _canCurrentUserDelete(PurchaseItem displayItem) {
+    final loggedUserId = Authen.requesterId?.toString();
+    String? creatorId;
+    final raw = displayItem.rawData ?? <String, dynamic>{};
+    final creatorCandidates = [
+      'user_id',
+      'requester_id',
+      'created_by',
+      'created_by_id',
+      'owner_id',
+      'requesterId',
+      'creator_id',
+      'creator',
+    ];
+    for (final k in creatorCandidates) {
+      final v = raw[k];
+      if (v == null) continue;
+      if (v is Map) {
+        if (v['id'] != null) {
+          creatorId = v['id'].toString();
+          break;
+        }
+      } else {
+        creatorId = v.toString();
+        break;
+      }
+    }
+
+    if (creatorId == null) {
+      try {
+        final maybe = int.tryParse(displayItem.reqBy);
+        if (maybe != null) creatorId = maybe.toString();
+      } catch (_) {}
+    }
+
+    bool anyApproved = false;
+    for (final a in _approvers) {
+      final status =
+          (a['status'] ?? a['step_state'] ?? a['state'] ?? a['approved'] ?? '')
+              .toString()
+              .toLowerCase();
+      if (status.contains('approved')) {
+        anyApproved = true;
+        break;
+      }
+      if (a['approved'] == true) {
+        anyApproved = true;
+        break;
+      }
+      if (a['step_state'] != null &&
+          a['step_state'].toString().toLowerCase() == 'approved') {
+        anyApproved = true;
+        break;
+      }
+    }
+
+    return loggedUserId != null &&
+        creatorId != null &&
+        loggedUserId == creatorId &&
+        !anyApproved;
+  }
+
+  Future<void> _onDeletePressed(PurchaseItem displayItem) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ยืนยันการลบ'),
+        content: const Text('ต้องการลบคำขอนี้จริงหรือไม่?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('ลบ'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    String? id = displayItem.id;
+    if (id.isEmpty) {
+      final rawData = displayItem.rawData;
+      if (rawData != null) {
+        id =
+            rawData['id']?.toString() ??
+            rawData['repair_request_id']?.toString();
+      }
+    }
+    if (id == null || id.isEmpty) {
+      id = await _resolveIdFromList();
+    }
+    await _deleteRequest(id);
   }
 
   Future<void> _closeRequest(String? id) async {
