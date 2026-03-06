@@ -9,6 +9,7 @@ import 'remark.dart';
 import '../../Authen/authen.dart';
 import 'closejob.dart';
 import 'document.dart';
+import 'usercheck.dart';
 
 // Data Model for detail page
 class PurchaseItem {
@@ -1884,6 +1885,33 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                     !isPhaseOne &&
                     !waitingForInspection) ...[
                   CloseJobButton(item: displayItem),
+                  const SizedBox(width: 12),
+                ],
+                if (waitingForInspection) ...[
+                  // User check button (pass/fail)
+                  UserCheckButton(
+                    item: displayItem,
+                    onChecked: (status, [remark]) {
+                      // Local feedback only; replace with API call if needed
+                      if (status == 'passed') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('ผลการตรวจสอบ: ผ่าน'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'ผลการตรวจสอบ: ไม่ผ่าน${remark != null ? ' — $remark' : ''}',
+                            ),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+                  ),
                   const SizedBox(width: 12),
                 ],
                 ElevatedButton(
