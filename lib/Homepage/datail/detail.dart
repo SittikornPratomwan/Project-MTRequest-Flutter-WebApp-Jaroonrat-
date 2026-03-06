@@ -403,7 +403,60 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสผู้อนุมัติ')));
       return;
     }
-    await _sendApproverAction(idx, approverId, false);
+    // Open remark dialog first and require a remark before rejecting
+    final repairId = _currentRepairRequestId;
+    if (repairId == null || repairId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ไม่พบข้อมูลรายการ เพื่อส่งการไม่อนุมัติ'),
+        ),
+      );
+      return;
+    }
+
+    final result = await showRemarkDialog(context, repairRequestId: repairId);
+    if (result == null) {
+      // user cancelled
+      return;
+    }
+    final remark = (result['remark'] as String?) ?? '';
+
+    // Call the reject endpoint: PATCH /repair-requests/{id}/reject
+    final uri = Uri.parse('$_baseHost/repair-requests/$repairId/reject');
+    final headers = _authHeaders(json: true);
+    final bodyMap = <String, dynamic>{};
+    if (Authen.requesterId != null) bodyMap['user_id'] = Authen.requesterId;
+    if (remark.isNotEmpty) bodyMap['remark'] = remark;
+
+    try {
+      final resp = await http
+          .patch(uri, headers: headers, body: jsonEncode(bodyMap))
+          .timeout(const Duration(seconds: 10));
+      debugPrint('Reject PATCH response: ${resp.statusCode} ${resp.body}');
+      if (resp.statusCode == 200 ||
+          resp.statusCode == 201 ||
+          resp.statusCode == 204) {
+        if (!mounted) return;
+        setState(() {
+          final now = DateTime.now().toIso8601String();
+          _approvers[idx]['approved'] = false;
+          _approvers[idx]['approved_at'] = now;
+          _approvers[idx]['status'] = 'rejected';
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('ไม่อนุมัติสำเร็จ')));
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('การไม่อนุมัติล้มเหลว')));
+    } catch (e) {
+      debugPrint('Error calling reject endpoint: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เกิดข้อผิดพลาด ขณะส่งคำขอไม่อนุมัติ')),
+      );
+    }
   }
 
   Future<void> _loadFilesForItem() async {
