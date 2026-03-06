@@ -871,6 +871,43 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         ? apiDept
         : displayItem.dept;
 
+    // Resolve category_id and characteristic_id from raw data (if present)
+    final catRaw = raw['category_id'] ?? raw['categoryId'] ?? raw['category'];
+    final charRaw =
+        raw['characteristic_id'] ??
+        raw['characteristicId'] ??
+        raw['characteristic'];
+    int? catId = catRaw != null ? int.tryParse(catRaw.toString()) : null;
+    int? charId = charRaw != null ? int.tryParse(charRaw.toString()) : null;
+
+    final Map<int, String> categoryNames = {
+      1: 'ไฟฟ้า',
+      2: 'ประปา',
+      3: 'โครงสร้าง',
+      6: 'แอร์',
+      7: 'อินเตอร์เน็ต',
+      8: 'รถยนต์',
+      9: 'โฟลคลิฟท์',
+      10: 'หอพัก',
+      11: 'เครื่องจักร',
+    };
+
+    final Map<int, String> characteristicNames = {
+      1: 'สร้าง',
+      2: 'ปรับปรุง',
+      3: 'ซ่อม',
+    };
+
+    final apiCategory = catId != null && categoryNames.containsKey(catId)
+        ? categoryNames[catId]
+        : (raw['category_name'] ?? raw['categoryName'])?.toString() ?? '';
+    final apiCharacteristic =
+        charId != null && characteristicNames.containsKey(charId)
+        ? characteristicNames[charId]
+        : (raw['characteristic_name'] ?? raw['characteristicName'])
+                  ?.toString() ??
+              '';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -975,6 +1012,18 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 // Show requester and department similar to the header
                 _buildTableRow('ผู้แจ้ง :', shownName, labelColor, valueColor),
                 _buildTableRow('แผนก :', shownDept, labelColor, valueColor),
+                _buildTableRow(
+                  'หมวดหมู่ :',
+                  apiCategory ?? '-',
+                  labelColor,
+                  valueColor,
+                ),
+                _buildTableRow(
+                  'ลักษณะ :',
+                  apiCharacteristic ?? '-',
+                  labelColor,
+                  valueColor,
+                ),
                 if (displayItem.approver.isNotEmpty)
                   _buildTableRow(
                     'เรียน/สำเนาถึง :',
