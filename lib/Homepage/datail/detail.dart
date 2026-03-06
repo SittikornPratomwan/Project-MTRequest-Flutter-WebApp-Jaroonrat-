@@ -1056,6 +1056,18 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   ?.toString() ??
               '';
 
+    // If the API provides a status label indicating final rejection, disable action buttons
+    final String statusLabelRaw =
+        (raw['status_label'] ?? raw['statusLabel'] ?? displayItem.status)
+            ?.toString() ??
+        '';
+    final bool overallRejected = statusLabelRaw == 'ไม่อนุมัติ';
+    // Determine workflow phase; if API reports current_phase == 1, treat as phase one
+    final dynamic phaseRaw =
+        raw['current_phase'] ?? raw['currentPhase'] ?? raw['phase'];
+    final bool isPhaseOne =
+        phaseRaw != null &&
+        (phaseRaw.toString() == '1' || (phaseRaw is int && phaseRaw == 1));
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -1338,13 +1350,24 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                     color: labelColor,
                   ),
                 ),
+                // If API indicated overall rejection via status_label, show fixed text and red color
                 Text(
-                  displayItem.status,
+                  overallRejected
+                      ? 'ไม่อนุมัติ'
+                      : (raw['status_label'] ??
+                                    raw['statusLabel'] ??
+                                    displayItem.status)
+                                ?.toString() ??
+                            displayItem.status,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: displayItem.status == 'อนุมัติ'
-                        ? Colors.green
-                        : Colors.orange[800],
+                    color: overallRejected
+                        ? Colors.red
+                        : ((displayItem.status == 'อนุมัติ' ||
+                                  (raw['status_label'] ?? raw['statusLabel']) ==
+                                      'อนุมัติ')
+                              ? Colors.green
+                              : Colors.orange[800]),
                   ),
                 ),
               ],
@@ -1454,10 +1477,13 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                         approver['approverId']);
                     final approverUserId = approverUserIdRaw?.toString();
                     final loggedUserId = Authen.requesterId?.toString();
+                    // User can act only when they are the approver and the overall request
+                    // is not already marked as final-rejected ('ไม่อนุมัติ').
                     final canAct =
                         approverUserId != null &&
                         loggedUserId != null &&
-                        approverUserId == loggedUserId;
+                        approverUserId == loggedUserId &&
+                        !overallRejected;
 
                     return TableRow(
                       children: [
@@ -1834,8 +1860,12 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   ),
                   const SizedBox(width: 12),
                 ],
-                CloseJobButton(item: displayItem),
-                const SizedBox(width: 12),
+                // Hide CloseJobButton when overall status_label indicates rejection
+                // or when the workflow is in phase 1
+                if (!overallRejected && !isPhaseOne) ...[
+                  CloseJobButton(item: displayItem),
+                  const SizedBox(width: 12),
+                ],
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
