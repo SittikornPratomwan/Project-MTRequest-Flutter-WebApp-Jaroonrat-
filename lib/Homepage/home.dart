@@ -188,6 +188,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return requestDate?.toString() ?? createdDate?.toString() ?? 'รอการอนุมัติ';
   }
 
+  // Map selected status dropdown value to display label
+  String _statusLabelForSelected(int sel) {
+    if (sel == 1) return 'รอการอนุมัติ';
+    if (sel == 2) return 'กำลังดำเนินการ';
+    if (sel == 3) return 'ดำเนินการสำเร็จ';
+    return '';
+  }
+
   // ฟังก์ชันเรียก API
   Future<List<PurchaseItem>> fetchRepairRequests(int limit, int offset) async {
     try {
@@ -433,16 +441,31 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           .toList();
     }
 
-    // Filter by status (current_phase): 0=all, 1=รอการอนุมัติ, 2=กำลังดำเนินการ, 3=งานที่จบแล้ว
+    // Filter by status (support multiple backend formats):
+    // 0=all, 1=รอการอนุมัติ, 2=กำลังดำเนินการ, 3=งานที่จบแล้ว
     if (selectedRadio != 0) {
       filtered = filtered.where((item) {
-        if (item.rawData == null) return false;
+        final raw = item.rawData ?? <String, dynamic>{};
         final phase =
-            int.tryParse(item.rawData!['current_phase']?.toString() ?? '0') ??
-            0;
-        if (selectedRadio == 1) return phase == 1; // รอการอนุมัติ
-        if (selectedRadio == 2) return phase == 2; // กำลังดำเนินการ
-        if (selectedRadio == 3) return phase > 2; // งานที่จบแล้ว (phase > 2)
+            int.tryParse(raw['current_phase']?.toString() ?? '') ?? -1;
+        final stepOrder =
+            int.tryParse(raw['current_step_order']?.toString() ?? '') ?? -1;
+        final statusText = item.status.toString();
+
+        if (selectedRadio == 1) {
+          return phase == 1 ||
+              stepOrder == 1 ||
+              statusText.contains('รอการอนุมัติ');
+        }
+        if (selectedRadio == 2) {
+          return phase == 2 ||
+              stepOrder == 2 ||
+              statusText.contains('กำลังดำเนินการ');
+        }
+        if (selectedRadio == 3) {
+          // finished: either phase>2, explicit step_order==3, or text contains 'สำเร็จ'
+          return phase > 2 || stepOrder == 3 || statusText.contains('สำเร็จ');
+        }
         return false;
       }).toList();
     }
@@ -730,7 +753,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               DropdownMenuItem(
                                 value: 3,
                                 child: Text(
-                                  'ดำเนินการเสร็จสิ้น',
+                                  'ดำเนินการสำเร็จ',
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 14,
@@ -1321,13 +1344,31 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      item.status,
+                                      selectedRadio != 0
+                                          ? _statusLabelForSelected(
+                                              selectedRadio,
+                                            )
+                                          : item.status,
                                       style: TextStyle(
                                         color:
-                                            (item.status == 'อนุมัติ' ||
-                                                item.status ==
+                                            ((selectedRadio != 0
+                                                        ? _statusLabelForSelected(
+                                                            selectedRadio,
+                                                          )
+                                                        : item.status) ==
+                                                    'อนุมัติ' ||
+                                                (selectedRadio != 0
+                                                        ? _statusLabelForSelected(
+                                                            selectedRadio,
+                                                          )
+                                                        : item.status) ==
                                                     'ดำเนินการสำเร็จ' ||
-                                                item.status.contains('สำเร็จ'))
+                                                (selectedRadio != 0
+                                                        ? _statusLabelForSelected(
+                                                            selectedRadio,
+                                                          )
+                                                        : item.status)
+                                                    .contains('สำเร็จ'))
                                             ? const Color(0xFF38A169)
                                             : const Color(0xFFD69E2E),
                                         fontWeight: FontWeight.w700,
