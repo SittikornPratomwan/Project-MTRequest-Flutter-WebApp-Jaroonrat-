@@ -177,19 +177,31 @@ class _DocumentPageState extends State<DocumentPage> {
     final reqDate = (raw['created_at'] ?? raw['createdAt'] ?? item.reqDate)
         .toString();
     final topic = (raw['topic'] ?? raw['description'] ?? item.topic ?? '')
-      .toString();
+        .toString();
+
+    // determine characteristic from API (1=สร้าง,2=ปรับปรุง,3=ซ่อม)
+    final charRaw =
+        raw['characteristic_id'] ??
+        raw['characteristicId'] ??
+        raw['characteristic'];
+    final int? charId = charRaw != null
+        ? int.tryParse(charRaw.toString())
+        : null;
+    final pdfIsCreate = charId == 1 || item.type.contains('สร้าง');
+    final pdfIsImprove = charId == 2 || item.type.contains('ปรับปรุง');
+    final pdfIsRepair = charId == 3 || item.type.contains('ซ่อม');
 
     // helper used in PDF layout (defined here so build can be a simple expression)
     pw.Widget dotField(String val) => pw.Expanded(
-          child: pw.Container(
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                bottom: pw.BorderSide(style: pw.BorderStyle.dashed),
-              ),
-            ),
-            child: pw.Text(val, style: pw.TextStyle(fontSize: 11)),
+      child: pw.Container(
+        decoration: const pw.BoxDecoration(
+          border: pw.Border(
+            bottom: pw.BorderSide(style: pw.BorderStyle.dashed),
           ),
-        );
+        ),
+        child: pw.Text(val, style: pw.TextStyle(fontSize: 11)),
+      ),
+    );
 
     pdf.addPage(
       pw.MultiPage(
@@ -262,9 +274,24 @@ class _DocumentPageState extends State<DocumentPage> {
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(style: pw.BorderStyle.dashed),
                     ),
-                    child: pw.Text(
-                      '◇ สร้าง   ◇ ซ่อม   ◇ สำเร็จ',
-                      style: pw.TextStyle(fontSize: 9),
+                    child: pw.Row(
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        pw.Text(
+                          pdfIsCreate ? '● สร้าง' : '○ สร้าง',
+                          style: pw.TextStyle(fontSize: 9),
+                        ),
+                        pw.SizedBox(width: 6),
+                        pw.Text(
+                          pdfIsImprove ? '● ปรับปรุง' : '○ ปรับปรุง',
+                          style: pw.TextStyle(fontSize: 9),
+                        ),
+                        pw.SizedBox(width: 6),
+                        pw.Text(
+                          pdfIsRepair ? '● ซ่อม' : '○ ซ่อม',
+                          style: pw.TextStyle(fontSize: 9),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -536,6 +563,18 @@ class _DocumentPageState extends State<DocumentPage> {
         .toString();
     const Color blue = Color(0xFF1976D2);
 
+    // resolve characteristic from API for UI ticking (1=สร้าง,2=ปรับปรุง,3=ซ่อม)
+    final charRaw =
+        raw['characteristic_id'] ??
+        raw['characteristicId'] ??
+        raw['characteristic'];
+    final int? charId = charRaw != null
+        ? int.tryParse(charRaw.toString())
+        : null;
+    final isCreate = charId == 1 || item.type.contains('สร้าง');
+    final isImprove = charId == 2 || item.type.contains('ปรับปรุง');
+    final isRepair = charId == 3 || item.type.contains('ซ่อม');
+
     return Scaffold(
       backgroundColor: const Color(0xFFF0F0F0),
       appBar: AppBar(
@@ -563,7 +602,7 @@ class _DocumentPageState extends State<DocumentPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // â”€â”€ Company Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              //Company Header
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -609,7 +648,7 @@ class _DocumentPageState extends State<DocumentPage> {
               ),
               const Divider(thickness: 1.2),
 
-              // â”€â”€ à¸¥à¸±à¸à¸©à¸“à¸°à¸‡à¸²à¸™ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── Job Type Section ─────────────────────────────────────────────────────────────
               Row(
                 children: [
                   const Text(
@@ -639,11 +678,11 @@ class _DocumentPageState extends State<DocumentPage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _diamondStatus('สร้าง', item.type.contains('สร้าง')),
+                        _diamondStatus('สร้าง', isCreate),
                         _arrowSep(),
-                        _diamondStatus('ซ่อม', item.type.contains('ซ่อม')),
+                        _diamondStatus('ปรับปรุง', isImprove),
                         _arrowSep(),
-                        _diamondStatus('สั่งทำ', item.type.contains('สั่งทำ ')),
+                        _diamondStatus('ซ่อม', isRepair),
                       ],
                     ),
                   ),
@@ -651,7 +690,7 @@ class _DocumentPageState extends State<DocumentPage> {
               ),
               const SizedBox(height: 10),
 
-              // â”€â”€ à¸œà¸¹à¹‰à¸ªà¹ˆà¸‡à¸‹à¹ˆà¸­à¸¡ / à¹à¸œà¸™à¸ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── Requester / Department ─────────────────────────────────────────────────────────────
               Row(
                 children: [
                   const Text(
@@ -669,7 +708,7 @@ class _DocumentPageState extends State<DocumentPage> {
               ),
               const SizedBox(height: 6),
 
-              // â”€â”€ à¸§à¸±à¸™à¸—à¸µà¹ˆ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── Date Section ─────────────────────────────────────────────────────────────
               Row(
                 children: [
                   const Text(
@@ -687,7 +726,7 @@ class _DocumentPageState extends State<DocumentPage> {
               ),
               const SizedBox(height: 14),
 
-              // â”€â”€ à¸£à¸²à¸¢à¸¥à¸°à¹€à¸­à¸µà¸¢à¸”à¸‚à¸­à¸‡à¸‡à¸²à¸™ title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── Section Title ─────────────────────────────────────────────────────────────
               Center(
                 child: Text(
                   'รายการรายละเอียดของงาน',
@@ -701,12 +740,12 @@ class _DocumentPageState extends State<DocumentPage> {
               ),
               const SizedBox(height: 10),
 
-              // â”€â”€ 2-Column Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── 2-Column Layout ─────────────────────────────────────────────────────────────
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Left: à¸ à¸²à¸žà¸›à¸£à¸°à¸à¸­à¸š
+                    // Left: ภาพประกอบ
                     Expanded(
                       flex: 4,
                       child: Container(
@@ -739,7 +778,7 @@ class _DocumentPageState extends State<DocumentPage> {
                                 color: Colors.grey.shade200,
                                 child: const Center(
                                   child: Text(
-                                    'à¹„à¸¡à¹ˆà¸¡à¸µà¸ à¸²à¸ž',
+                                    'ไม่มีภาพประกอบ',
                                     style: TextStyle(color: Colors.grey),
                                   ),
                                 ),
@@ -794,7 +833,7 @@ class _DocumentPageState extends State<DocumentPage> {
               ),
               const SizedBox(height: 16),
 
-              // â”€â”€ Approval Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ── Approval Table ─────────────────────────────────────────────────────────────
               Table(
                 border: TableBorder.all(color: Colors.grey.shade500),
                 columnWidths: const {
@@ -835,7 +874,7 @@ class _DocumentPageState extends State<DocumentPage> {
                       );
                     }),
                   ),
-                  // à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´ / à¹„à¸¡à¹ˆà¸­à¸™à¸¸à¸¡à¸±à¸•à¸´
+                  // Approval status / Rejection status
                   TableRow(
                     children: List.generate(3, (i) {
                       final a = i < _approvers.length ? _approvers[i] : null;
@@ -898,9 +937,9 @@ class _DocumentPageState extends State<DocumentPage> {
     );
   }
 
-  // â”€â”€ Helper Widgets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helper Widgets ─────────────────────────────────────────────────────────────
 
-  /// à¸§à¸‡à¸à¸¥à¸¡ radio + label
+  /// Widget for radio button + label
   Widget _radioOption(String label, bool selected) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -914,28 +953,28 @@ class _DocumentPageState extends State<DocumentPage> {
     ],
   );
 
-  /// ◇ Diamond shape + label (à¹€à¸«à¸¡à¸·à¸­à¸™à¹ƒà¸™à¸£à¸¹à¸›)
+  /// ◇ Diamond shape + label
   Widget _diamondStatus(String label, bool active) {
     const blue = Color(0xFF1976D2);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Hexagon/arrow shape approximated with rotated square
-        Transform.rotate(
-          angle: 0.785,
-          child: Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              border: Border.all(
-                width: 1.5,
-                color: active ? blue : Colors.grey.shade500,
-              ),
-              color: active ? blue.withOpacity(0.15) : Colors.transparent,
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: active ? blue : Colors.transparent,
+            border: Border.all(
+              width: 1.5,
+              color: active ? blue : Colors.grey.shade500,
             ),
           ),
+          child: active
+              ? const Icon(Icons.check, size: 12, color: Colors.white)
+              : const SizedBox.shrink(),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 8),
         Text(
           label,
           style: TextStyle(
@@ -948,13 +987,11 @@ class _DocumentPageState extends State<DocumentPage> {
     );
   }
 
-  /// à¸¥à¸¹à¸à¸¨à¸£à¸„à¸±à¹ˆà¸™à¸£à¸°à¸«à¸§à¹ˆà¸²à¸‡ status
   Widget _arrowSep() => const Padding(
     padding: EdgeInsets.symmetric(horizontal: 4),
     child: Text('›', style: TextStyle(fontSize: 16, color: Colors.grey)),
   );
 
-  /// field à¹à¸šà¸šà¸¡à¸µà¹€à¸ªà¹‰à¸™à¸ˆà¸¸à¸”à¸”à¹‰à¸²à¸™à¸¥à¹ˆà¸²à¸‡
   Widget _dotField(String value) => Container(
     margin: const EdgeInsets.only(bottom: 2),
     decoration: const BoxDecoration(
@@ -974,7 +1011,6 @@ class _DocumentPageState extends State<DocumentPage> {
     ),
   );
 
-  /// à¹€à¸ªà¹‰à¸™ dotted à¸ªà¸³à¸«à¸£à¸±à¸šà¸Šà¹ˆà¸­à¸‡à¹€à¸‚à¸µà¸¢à¸™
   Widget _dottedLine() => Padding(
     padding: const EdgeInsets.only(bottom: 6),
     child: Row(
@@ -991,7 +1027,7 @@ class _DocumentPageState extends State<DocumentPage> {
     ),
   );
 
-  /// Header cell à¸•à¸²à¸£à¸²à¸‡ approval
+  /// Header cell for approval
   Widget _roleHeader(String text) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
     child: Center(
@@ -1003,7 +1039,7 @@ class _DocumentPageState extends State<DocumentPage> {
     ),
   );
 
-  /// Radio à¸§à¸‡à¸à¸¥à¸¡à¸ªà¸³à¸«à¸£à¸±à¸šà¹à¸–à¸§à¸­à¸™à¸¸à¸¡à¸±à¸•à¸´
+  /// Radio button for approval
   Widget _approvalRadio(String label, bool selected) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
