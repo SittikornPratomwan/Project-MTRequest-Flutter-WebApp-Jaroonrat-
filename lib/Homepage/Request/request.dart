@@ -62,6 +62,28 @@ class _RequestFormPageState extends State<RequestFormPage> {
   bool _isSubmitting = false;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  // Category and characteristic selections (display Thai, send numeric id)
+  int? _categoryId;
+  int? _characteristicId;
+
+  // Hardcoded option lists from DB (display names in Thai)
+  final Map<int, String> _categoryOptions = {
+    1: 'ไฟฟ้า',
+    2: 'ประปา',
+    3: 'โครงสร้าง',
+    6: 'แอร์',
+    7: 'อินเตอร์เน็ต',
+    8: 'รถยนต์',
+    9: 'โฟลคลิฟท์',
+    10: 'หอพัก',
+    11: 'เครื่องจักร',
+  };
+
+  final Map<int, String> _characteristicOptions = {
+    1: 'สร้าง',
+    2: 'ปรับปรุง',
+    3: 'ซ่อม',
+  };
 
   @override
   void initState() {
@@ -196,6 +218,11 @@ class _RequestFormPageState extends State<RequestFormPage> {
       } else if (Authen.division != null && Authen.division!.isNotEmpty) {
         payload['department_name'] = Authen.division;
       }
+
+      // Include selected category_id and characteristic_id (numeric ids)
+      if (_categoryId != null) payload['category_id'] = _categoryId;
+      if (_characteristicId != null)
+        payload['characteristic_id'] = _characteristicId;
 
       // Log payload with one key:value per line for readability
       final payloadLines = payload.entries
@@ -530,6 +557,85 @@ class _RequestFormPageState extends State<RequestFormPage> {
             ),
 
             const SizedBox(height: 12),
+            // ------------------------------------------------
+            // Category & Characteristic dropdowns (show Thai, send numeric id)
+            // ------------------------------------------------
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const SizedBox(
+                  width: 100,
+                  child: Text(
+                    'หมวดหมู่ :',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2D3748),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    value: _categoryId,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    items: _categoryOptions.entries
+                        .map(
+                          (e) => DropdownMenuItem<int>(
+                            value: e.key,
+                            child: Text(e.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _categoryId = v),
+                    hint: const Text('เลือกหมวดหมู่'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const SizedBox(
+                  width: 100,
+                  child: Text(
+                    'ลักษณะ :',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2D3748),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    value: _characteristicId,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    items: _characteristicOptions.entries
+                        .map(
+                          (e) => DropdownMenuItem<int>(
+                            value: e.key,
+                            child: Text(e.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _characteristicId = v),
+                    hint: const Text('เลือกลักษณะ'),
+                  ),
+                ),
+              ],
+            ),
             const Text(
               'แนบรูป / ไฟล์ (สูงสุด 5)',
               style: TextStyle(fontWeight: FontWeight.bold),

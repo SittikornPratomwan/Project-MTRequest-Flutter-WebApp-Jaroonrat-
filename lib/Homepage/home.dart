@@ -730,7 +730,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                               DropdownMenuItem(
                                 value: 3,
                                 child: Text(
-                                  'งานที่จบแล้ว',
+                                  'ดำเนินการเสร็จสิ้น',
                                   style: const TextStyle(
                                     color: Color(0xFF2D3748),
                                     fontSize: 14,
