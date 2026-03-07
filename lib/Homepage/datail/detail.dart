@@ -1981,7 +1981,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   CloseJobButton(item: displayItem),
                   const SizedBox(width: 12),
                 ],
-                if (waitingForInspection) ...[
+                if (waitingForInspection && _isCreatorOf(displayItem)) ...[
                   // User check button (pass/fail)
                   UserCheckButton(
                     item: displayItem,
@@ -2002,6 +2002,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   ),
                   const SizedBox(width: 12),
                 ],
+
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
@@ -2188,6 +2189,46 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         creatorId != null &&
         loggedUserId == creatorId &&
         !anyApproved;
+  }
+
+  // Return true when the currently logged-in user is the creator/owner of the item
+  bool _isCreatorOf(PurchaseItem displayItem) {
+    final loggedUserId = Authen.requesterId?.toString();
+    if (loggedUserId == null) return false;
+    String? creatorId;
+    final raw = displayItem.rawData ?? <String, dynamic>{};
+    final creatorCandidates = [
+      'user_id',
+      'requester_id',
+      'created_by',
+      'created_by_id',
+      'owner_id',
+      'requesterId',
+      'creator_id',
+      'creator',
+    ];
+    for (final k in creatorCandidates) {
+      final v = raw[k];
+      if (v == null) continue;
+      if (v is Map) {
+        if (v['id'] != null) {
+          creatorId = v['id'].toString();
+          break;
+        }
+      } else {
+        creatorId = v.toString();
+        break;
+      }
+    }
+
+    if (creatorId == null) {
+      try {
+        final maybe = int.tryParse(displayItem.reqBy);
+        if (maybe != null) creatorId = maybe.toString();
+      } catch (_) {}
+    }
+
+    return creatorId != null && creatorId == loggedUserId;
   }
 
   Future<void> _onDeletePressed(PurchaseItem displayItem) async {
