@@ -460,6 +460,100 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
+  // Handle requester acceptance (user inspection passed) by calling
+  // POST /drugs/repair-requests/{id}/requester-accept
+  Future<void> _handleRequesterAccept() async {
+    String? id = _currentRepairRequestId ?? widget.item?.id;
+    if (id == null || id.isEmpty) id = await _resolveIdFromList();
+    if (id == null || id.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ไม่พบ ID สำหรับส่งการตรวจรับ')),
+        );
+      }
+      return;
+    }
+
+    final uri = Uri.parse('$_baseHost/repair-requests/$id/requester-accept');
+    final headers = _authHeaders(json: true);
+
+    final bodyMap = <String, dynamic>{};
+    if (Authen.requesterId != null) bodyMap['user_id'] = Authen.requesterId;
+    // include raw item data to help server process the submission
+    if (widget.item?.rawData != null) {
+      bodyMap['data'] = widget.item!.rawData;
+    }
+
+    try {
+      // Prefer PATCH as shown in the API screenshot. If PATCH not supported, fall back to POST.
+      try {
+        debugPrint('PATCH requester-accept URI: $uri');
+        debugPrint('PATCH headers: $headers');
+        debugPrint('PATCH body: ${jsonEncode(bodyMap)}');
+        final pResp = await http
+            .patch(uri, headers: headers, body: jsonEncode(bodyMap))
+            .timeout(const Duration(seconds: 10));
+        debugPrint('PATCH response: ${pResp.statusCode} ${pResp.body}');
+        if (pResp.statusCode == 200 ||
+            pResp.statusCode == 201 ||
+            pResp.statusCode == 204) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('ส่งการตรวจรับสำเร็จ'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            await _loadApproversForItem();
+            await _loadCommentsForItem();
+          }
+          return;
+        }
+      } catch (e) {
+        debugPrint('PATCH requester-accept error: $e');
+      }
+
+      // fallback to POST if PATCH failed
+      try {
+        debugPrint('POST requester-accept URI: $uri');
+        final resp = await http
+            .post(uri, headers: headers, body: jsonEncode(bodyMap))
+            .timeout(const Duration(seconds: 10));
+        debugPrint('POST response: ${resp.statusCode} ${resp.body}');
+        if (resp.statusCode == 200 ||
+            resp.statusCode == 201 ||
+            resp.statusCode == 204) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('ส่งการตรวจรับสำเร็จ'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            await _loadApproversForItem();
+            await _loadCommentsForItem();
+          }
+          return;
+        }
+      } catch (e) {
+        debugPrint('POST requester-accept error: $e');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('การส่งการตรวจรับล้มเหลว')),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error calling requester-accept: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('เกิดข้อผิดพลาด ขณะส่งการตรวจรับ')),
+        );
+      }
+    }
+  }
+
   Future<void> _loadFilesForItem() async {
     String? id;
 
@@ -1892,24 +1986,18 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   UserCheckButton(
                     item: displayItem,
                     onChecked: (status, [remark]) {
-                      // Local feedback only; replace with API call if needed
                       if (status == 'passed') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('ผลการตรวจสอบ: ผ่าน'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'ผลการตรวจสอบ: ไม่ผ่าน${remark != null ? ' — $remark' : ''}',
-                            ),
-                            backgroundColor: Colors.redAccent,
-                          ),
-                        );
+                        _handleRequesterAccept();
+                        return;
                       }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'ผลการตรวจสอบ: ไม่ผ่าน${remark != null ? ' — $remark' : ''}',
+                          ),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
                     },
                   ),
                   const SizedBox(width: 12),
