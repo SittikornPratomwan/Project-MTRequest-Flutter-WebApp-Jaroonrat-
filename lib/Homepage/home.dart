@@ -1184,6 +1184,32 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                                 child: Builder(
                                   builder: (context) {
+                                    final status =
+                                        item.status?.toString() ?? '';
+                                    final low = status.toLowerCase();
+
+                                    if (low.contains('ไม่อนุมัติ')) {
+                                      return const Text(
+                                        'ไม่ผ่านการอนุมัติ',
+                                        style: TextStyle(
+                                          color: Color(0xFF2D3748),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      );
+                                    }
+
+                                    if (low.contains('เสร็จ')) {
+                                      return const Text(
+                                        'เสร็จสิ้น',
+                                        style: TextStyle(
+                                          color: Color(0xFF2D3748),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      );
+                                    }
+
                                     final remainingDays = _getRemainingDays(
                                       item.reqDate,
                                     );
@@ -1193,9 +1219,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                     return Text(
                                       _formatDateOnly(item.reqDate),
                                       style: TextStyle(
-                                        color: isUrgent
-                                            ? const Color(0xFFE53E3E)
-                                            : const Color(0xFF4A5568),
+                                        color: const Color(0xFF2D3748),
                                         fontSize: 14,
                                         fontWeight: isUrgent
                                             ? FontWeight.w700
@@ -1228,7 +1252,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 child: Text(
                                   item.dept,
                                   style: const TextStyle(
-                                    color: Color(0xFF38A169),
+                                    color: Color(0xFF2D3748),
                                     fontWeight: FontWeight.w600,
                                     fontSize: 14,
                                   ),
