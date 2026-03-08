@@ -1203,14 +1203,36 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8.0,
                                 ),
-                                child: Icon(
-                                  _readIds.contains(item.id)
-                                      ? Icons.mark_email_read
-                                      : Icons.markunread,
-                                  color: _readIds.contains(item.id)
-                                      ? const Color(0xFF38A169)
-                                      : const Color(0xFFED8936),
-                                  size: 20,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Icon(
+                                      _readIds.contains(item.id)
+                                          ? Icons.mark_email_read
+                                          : Icons.markunread,
+                                      color: _readIds.contains(item.id)
+                                          ? const Color(0xFF94A3B8)
+                                          : const Color(0xFF1976D2),
+                                      size: 20,
+                                    ),
+                                    if (!_readIds.contains(item.id))
+                                      Positioned(
+                                        right: -2,
+                                        top: -2,
+                                        child: Container(
+                                          width: 10,
+                                          height: 10,
+                                          decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                             ),
