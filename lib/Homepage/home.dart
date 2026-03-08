@@ -1164,7 +1164,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             setState(() {
                               _selectedItem = selected == true ? item : null;
                               if (selected == true) {
-                                // mark as read when user selects (opens) the item
+                                // mark as locally read when user selects (opens) the item in this session
                                 if (item.id.isNotEmpty) _readIds.add(item.id);
                               }
                             });
@@ -1203,36 +1203,57 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8.0,
                                 ),
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Icon(
-                                      _readIds.contains(item.id)
-                                          ? Icons.mark_email_read
-                                          : Icons.markunread,
-                                      color: _readIds.contains(item.id)
-                                          ? const Color(0xFF94A3B8)
-                                          : const Color(0xFF1976D2),
-                                      size: 20,
-                                    ),
-                                    if (!_readIds.contains(item.id))
-                                      Positioned(
-                                        right: -2,
-                                        top: -2,
-                                        child: Container(
-                                          width: 10,
-                                          height: 10,
-                                          decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: Colors.white,
-                                              width: 1.5,
+                                child: Builder(
+                                  builder: (context) {
+                                    // is_read = false หมายถึง ยังไม่อ่าน (มีข้อความใหม่)
+                                    // is_read = true  หมายถึง อ่านแล้ว (ไม่มีข้อความใหม่)
+                                    bool hasNewMsgFromApi = false;
+                                    if (item.rawData != null &&
+                                        item.rawData!['is_read'] != null) {
+                                      final val = item.rawData!['is_read'];
+                                      hasNewMsgFromApi =
+                                          (val == false ||
+                                          val == 'false' ||
+                                          val == 0);
+                                    }
+
+                                    // ซ่อนจุดแจ้งเตือนหากผู้ใช้กดเปิดดูใน session ปัจจุบันแล้ว (_readIds.contains)
+                                    final bool showNewMessageIcon =
+                                        hasNewMsgFromApi &&
+                                        !_readIds.contains(item.id);
+
+                                    return Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Icon(
+                                          showNewMessageIcon
+                                              ? Icons.markunread
+                                              : Icons.mark_email_read,
+                                          color: showNewMessageIcon
+                                              ? const Color(0xFF1976D2)
+                                              : const Color(0xFF94A3B8),
+                                          size: 20,
+                                        ),
+                                        if (showNewMessageIcon)
+                                          Positioned(
+                                            right: -2,
+                                            top: -2,
+                                            child: Container(
+                                              width: 10,
+                                              height: 10,
+                                              decoration: BoxDecoration(
+                                                color: Colors.red,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 1.5,
+                                                ),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                  ],
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -1316,32 +1337,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                                 child: Builder(
                                   builder: (context) {
-                                    final status =
-                                        item.status?.toString() ?? '';
-                                    final low = status.toLowerCase();
-
-                                    if (low.contains('ไม่อนุมัติ')) {
-                                      return const Text(
-                                        'ไม่ผ่านการอนุมัติ',
-                                        style: TextStyle(
-                                          color: Color(0xFF2D3748),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      );
-                                    }
-
-                                    if (low.contains('เสร็จ')) {
-                                      return const Text(
-                                        'เสร็จสิ้น',
-                                        style: TextStyle(
-                                          color: Color(0xFF2D3748),
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      );
-                                    }
-
                                     final remainingDays = _getRemainingDays(
                                       item.reqDate,
                                     );
