@@ -174,6 +174,34 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return '';
   }
 
+  // Map a raw status string to one of the status categories used in the dropdown
+  String _mapStatusToCategory(String raw) {
+    final s = raw.toLowerCase();
+    if (s.contains('ไม่อนุมัติ') ||
+        s.contains('ยกเลิก') ||
+        s.contains('reject') ||
+        s.contains('rejected')) {
+      return 'ไม่ผ่านการอนุมัติ';
+    }
+    if (s.contains('รอช่าง') || (s.contains('รอ') && s.contains('ช่าง'))) {
+      return 'รอช่างอนุมัติ';
+    }
+    if (s.contains('ตรวจ') || s.contains('inspection')) {
+      return 'รอตรวจรับงาน';
+    }
+    if (s.contains('เสร็จ') ||
+        s.contains('สำเร็จ') ||
+        s.contains('complete') ||
+        s.contains('finish') ||
+        s.contains('อนุมัติ')) {
+      return 'เสร็จสิ้น';
+    }
+    if (s.contains('รอ') || s.contains('pending') || s.contains('wait')) {
+      return 'รออนุมัติ';
+    }
+    return 'อื่นๆ';
+  }
+
   // ฟังก์ชันเรียก API
   Future<List<PurchaseItem>> fetchRepairRequests(int limit, int offset) async {
     try {
@@ -404,6 +432,16 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   String? selectedPriority = 'ทั้งหมด';
   int selectedRadio = 0; // 0=All, 1=Finished, etc.
   List<String> _priorityOptions = ['ทั้งหมด'];
+  // สถานะตัวกรอง (dropdown)
+  String selectedStatus = 'ทั้งหมด';
+  final List<String> _statusOptions = [
+    'ทั้งหมด',
+    'รออนุมัติ',
+    'รอช่างอนุมัติ',
+    'รอตรวจรับงาน',
+    'เสร็จสิ้น',
+    'ไม่ผ่านการอนุมัติ',
+  ];
 
   // ตัวแปรสำหรับ Search
   String _searchBy = 'รหัส';
@@ -425,6 +463,40 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       filtered = filtered
           .where((item) => item.type == selectedPriority)
           .toList();
+    }
+
+    // Filter by status from dropdown
+    if (selectedStatus != 'ทั้งหมด') {
+      filtered = filtered.where((item) {
+        final rawLabel =
+            (item.rawData != null
+                    ? (item.rawData!['status_label'] ??
+                          item.rawData!['statusLabel'])
+                    : null)
+                ?.toString()
+                .trim()
+                .toLowerCase();
+
+        final normalized =
+            rawLabel ?? item.status.toString().trim().toLowerCase();
+
+        // Exact-match filtering per user's mapping
+        switch (selectedStatus) {
+          case 'รออนุมัติ':
+            return normalized == 'รออนุมัติ';
+          case 'รอช่างอนุมัติ':
+            return normalized == 'รอช่างอนุมัติ';
+          case 'รอตรวจรับงาน':
+            return normalized == 'รอตรวจรับงาน';
+          case 'เสร็จสิ้น':
+            return normalized == 'เสร็จสิ้น';
+          case 'ไม่ผ่านการอนุมัติ':
+            // user asked to map this to status_label == 'ไม่อนุมัติ'
+            return normalized == 'ไม่อนุมัติ';
+          default:
+            return false;
+        }
+      }).toList();
     }
 
     // Filter by status (support multiple backend formats):
@@ -677,6 +749,44 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           selectedPriority = v;
                           _searchKeyword = '';
                           _keywordController.clear();
+                        }),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'สถานะ : ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2D3748),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.white,
+                      ),
+                      child: DropdownButton<String>(
+                        value: selectedStatus,
+                        underline: const SizedBox.shrink(),
+                        items: _statusOptions.map((e) {
+                          return DropdownMenuItem<String>(
+                            value: e,
+                            child: Text(
+                              e,
+                              style: const TextStyle(
+                                color: Color(0xFF2D3748),
+                                fontSize: 14,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (v) => setState(() {
+                          selectedStatus = v ?? 'ทั้งหมด';
                         }),
                       ),
                     ),
@@ -1267,7 +1377,13 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                                 child: Builder(
                                   builder: (context) {
-                                    final s = item.status.toString();
+                                    final s =
+                                        (item.rawData != null
+                                                ? (item.rawData!['status_label'] ??
+                                                      item.rawData!['statusLabel'])
+                                                : null)
+                                            ?.toString() ??
+                                        item.status.toString();
                                     final low = s.toLowerCase();
                                     Color color;
                                     if (low.contains('ไม่อนุมัติ') ||
