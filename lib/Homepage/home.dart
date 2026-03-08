@@ -1235,18 +1235,49 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                               ),
                             ),
-                            // New cell: show status_label from API (stored in item.status)
+                            // New cell: show status_label from API (colored)
                             DataCell(
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8.0,
                                 ),
-                                child: Text(
-                                  item.status,
-                                  style: const TextStyle(
-                                    color: Color(0xFF4A5568),
-                                    fontSize: 14,
-                                  ),
+                                child: Builder(
+                                  builder: (context) {
+                                    final s = item.status.toString();
+                                    final low = s.toLowerCase();
+                                    Color color;
+                                    if (low.contains('ไม่อนุมัติ') ||
+                                        low.contains('ยกเลิก') ||
+                                        low.contains('reject') ||
+                                        low.contains('rejected')) {
+                                      color = const Color(
+                                        0xFFC53030,
+                                      ); // red for rejected
+                                    } else if (low.contains('เสร็จ') ||
+                                        low.contains('สำเร็จ') ||
+                                        low.contains('เสร็จสิ้น')) {
+                                      color = const Color(0xFF38A169); // green
+                                    } else if (low.contains('ตรวจรับ') ||
+                                        low.contains('ตรวจ')) {
+                                      color = const Color(0xFF2B6CB0); // blue
+                                    } else if (low.contains('อนุมัติ') ||
+                                        low.contains('รอ')) {
+                                      color = const Color(0xFFF6E05E); // yellow
+                                    } else {
+                                      color = const Color(
+                                        0xFF4A5568,
+                                      ); // default grey
+                                    }
+
+                                    return Text(
+                                      s,
+                                      style: TextStyle(
+                                        color: color,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
