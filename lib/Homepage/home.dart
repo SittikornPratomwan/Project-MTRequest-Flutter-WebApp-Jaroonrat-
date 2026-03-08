@@ -151,29 +151,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return map[priority.toLowerCase()] ?? priority;
   }
 
-  // ฟังก์ชันแปล current_phase เป็น status ภาษาไทย
-  String _getStatusFromPhase(dynamic currentPhase) {
-    if (currentPhase == null) return 'รอการอนุมัติ';
-    final phase = int.tryParse(currentPhase.toString()) ?? 0;
-    if (phase == 1) return 'รอการอนุมัติ';
-    if (phase == 2) return 'กำลังดำเนินการ';
-    return 'รอการอนุมัติ';
-  }
-
-  // ตรวจสอบไอเท็ม (Map) หากมี key 'current_step_order' == 3
-  // ให้คืนค่าเป็น 'ดำเนินการสำเร็จ' มิฉะนั้น fallback ไปยัง phase
-  String _getStatusFromItem(dynamic item) {
-    try {
-      if (item is Map && item.containsKey('current_step_order')) {
-        final raw = item['current_step_order'];
-        final v = int.tryParse(raw?.toString() ?? '') ?? -1;
-        if (v == 3) return 'ดำเนินการสำเร็จ';
-      }
-    } catch (_) {}
-    return _getStatusFromPhase(item is Map ? item['current_phase'] : item);
-  }
-
-  // ฟังก์ชันเลือก reqDate ตามค่า current_phase
+  // ฟังก์ชันเลือก reqDate ตามค่า current_phase (ยังคงไว้ใช้กับวันที่ได้)
   String _getReqDate(
     dynamic currentPhase,
     dynamic dueDate,
@@ -281,7 +259,10 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               item['department_name']?.toString() ??
               item['department']?.toString() ??
               '',
-          status: _getStatusFromItem(item),
+          // ดึงค่า status_label มาใช้แทน current_phase
+          status:
+              (item['status_label'] ?? item['statusLabel'] ?? 'รอการอนุมัติ')
+                  .toString(),
           approver:
               item['approver']?.toString() ??
               item['approved_by']?.toString() ??
@@ -291,7 +272,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               item['created_date']?.toString() ??
               item['createdAt']?.toString() ??
               '',
-          isHighlight: (item['status']?.toString() ?? '').contains('อนุมัติ'),
+          isHighlight: (item['status_label']?.toString() ?? '').contains(
+            'อนุมัติ',
+          ),
           rawData: item is Map ? Map<String, dynamic>.from(item) : null,
         );
       }).toList();
@@ -391,7 +374,10 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               item['department_name']?.toString() ??
               item['department']?.toString() ??
               '',
-          status: _getStatusFromItem(item),
+          // ดึงค่า status_label มาใช้แทน current_phase
+          status:
+              (item['status_label'] ?? item['statusLabel'] ?? 'รอการอนุมัติ')
+                  .toString(),
           approver:
               item['approver']?.toString() ??
               item['approved_by']?.toString() ??
@@ -445,26 +431,24 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     // 0=all, 1=รอการอนุมัติ, 2=กำลังดำเนินการ, 3=งานที่จบแล้ว
     if (selectedRadio != 0) {
       filtered = filtered.where((item) {
-        final raw = item.rawData ?? <String, dynamic>{};
-        final phase =
-            int.tryParse(raw['current_phase']?.toString() ?? '') ?? -1;
-        final stepOrder =
-            int.tryParse(raw['current_step_order']?.toString() ?? '') ?? -1;
-        final statusText = item.status.toString();
+        final statusLabel = item.status.toLowerCase();
 
         if (selectedRadio == 1) {
-          return phase == 1 ||
-              stepOrder == 1 ||
-              statusText.contains('รอการอนุมัติ');
+          return statusLabel.contains('รอ') ||
+              statusLabel.contains('pending') ||
+              statusLabel.contains('wait');
         }
         if (selectedRadio == 2) {
-          return phase == 2 ||
-              stepOrder == 2 ||
-              statusText.contains('กำลังดำเนินการ');
+          return statusLabel.contains('ดำเนิน') ||
+              statusLabel.contains('กำลัง') ||
+              statusLabel.contains('progress') ||
+              statusLabel.contains('in progress');
         }
         if (selectedRadio == 3) {
-          // finished: either phase>2, explicit step_order==3, or text contains 'สำเร็จ'
-          return phase > 2 || stepOrder == 3 || statusText.contains('สำเร็จ');
+          return statusLabel.contains('สำเร็จ') ||
+              statusLabel.contains('อนุมัติ') ||
+              statusLabel.contains('complete') ||
+              statusLabel.contains('finish');
         }
         return false;
       }).toList();
@@ -695,80 +679,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           _keywordController.clear();
                         }),
                       ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'สถานะ : ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2D3748),
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          height: 36,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                            borderRadius: BorderRadius.circular(6),
-                            color: Colors.white,
-                          ),
-                          child: DropdownButton<int>(
-                            value: selectedRadio,
-                            underline: const SizedBox.shrink(),
-                            items: [
-                              DropdownMenuItem(
-                                value: 0,
-                                child: Text(
-                                  'ทั้งหมด',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D3748),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 1,
-                                child: Text(
-                                  'รอการอนุมัติ',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D3748),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 2,
-                                child: Text(
-                                  'กำลังดำเนินการ',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D3748),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                              DropdownMenuItem(
-                                value: 3,
-                                child: Text(
-                                  'ดำเนินการสำเร็จ',
-                                  style: const TextStyle(
-                                    color: Color(0xFF2D3748),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            onChanged: (v) => setState(() {
-                              selectedRadio = v ?? 0;
-                              _searchKeyword = '';
-                              _keywordController.clear();
-                            }),
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -1053,16 +963,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         right: BorderSide(color: Colors.grey[200]!, width: 1),
                       ),
                       columns: const [
-                        DataColumn(
-                          label: Text(
-                            'สถานะ',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1976D2),
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
+                        DataColumn(label: SizedBox.shrink()),
                         DataColumn(
                           label: Text(
                             'หมายเลข',
@@ -1334,56 +1235,18 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                               ),
                             ),
+                            // New cell: show status_label from API (stored in item.status)
                             DataCell(
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8.0,
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      selectedRadio != 0
-                                          ? _statusLabelForSelected(
-                                              selectedRadio,
-                                            )
-                                          : item.status,
-                                      style: TextStyle(
-                                        color:
-                                            ((selectedRadio != 0
-                                                        ? _statusLabelForSelected(
-                                                            selectedRadio,
-                                                          )
-                                                        : item.status) ==
-                                                    'อนุมัติ' ||
-                                                (selectedRadio != 0
-                                                        ? _statusLabelForSelected(
-                                                            selectedRadio,
-                                                          )
-                                                        : item.status) ==
-                                                    'ดำเนินการสำเร็จ' ||
-                                                (selectedRadio != 0
-                                                        ? _statusLabelForSelected(
-                                                            selectedRadio,
-                                                          )
-                                                        : item.status)
-                                                    .contains('สำเร็จ'))
-                                            ? const Color(0xFF38A169)
-                                            : const Color(0xFFD69E2E),
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    if (item.approver.isNotEmpty)
-                                      Text(
-                                        item.approver,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF718096),
-                                        ),
-                                      ),
-                                  ],
+                                child: Text(
+                                  item.status,
+                                  style: const TextStyle(
+                                    color: Color(0xFF4A5568),
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ),
                             ),
