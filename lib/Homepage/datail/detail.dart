@@ -1182,9 +1182,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     // Check logged-in user's department name (require MT)
     final String _loggedDept = (Authen.departmentName ?? '').toString().trim();
     final bool isDeptMT = _loggedDept.toUpperCase() == 'MT';
-    // If API reports waiting-for-acceptance, map to 'รอตรวจสอบ' and hide close button
+    // If API reports waiting-for-acceptance or failed inspection, hide approver UI
     final String statusLabelNormalized = statusLabelRaw.trim();
-    final bool waitingForInspection = statusLabelNormalized == 'รอตรวจรับงาน';
+    final bool waitingForInspection =
+        statusLabelNormalized == 'รอตรวจรับงาน' ||
+        statusLabelNormalized == 'ตรวจสอบไม่ผ่าน';
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -1493,251 +1495,260 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             ),
             const SizedBox(height: 5),
 
-            // Status line showing loaded approvers count
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                _loadingApprovers
-                    ? 'กำลังโหลดผู้อนุมัติ...'
-                    : _approvers.isEmpty
-                    ? 'ไม่พบผู้อนุมัติ'
-                    : 'พบผู้อนุมัติ ${_approvers.length} คน: ${_approvers.map((a) => _extractUsername(a)).join(", ")}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _approvers.isEmpty ? Colors.red : Colors.green[700],
-                  fontWeight: FontWeight.w500,
+            // Only show approver summary and table when NOT waiting for requester inspection
+            if (!waitingForInspection) ...[
+              // Status line showing loaded approvers count
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  _loadingApprovers
+                      ? 'กำลังโหลดผู้อนุมัติ...'
+                      : _approvers.isEmpty
+                      ? 'ไม่พบผู้อนุมัติ'
+                      : 'พบผู้อนุมัติ ${_approvers.length} คน: ${_approvers.map((a) => _extractUsername(a)).join(", ")}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _approvers.isEmpty ? Colors.red : Colors.green[700],
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-            ),
 
-            Table(
-              border: TableBorder.all(color: Colors.grey[600]!),
-              columnWidths: const {
-                0: FixedColumnWidth(40), // No
-                1: FlexColumnWidth(2), // Name
-                2: FlexColumnWidth(1.5), // Approved
-                3: FlexColumnWidth(1), // Not Approved
-              },
-              children: [
-                // Table Header
-                TableRow(
-                  decoration: BoxDecoration(color: Colors.grey[200]),
-                  children: [
-                    _buildHeaderCell('No'),
-                    _buildHeaderCell('Name'),
-                    _buildHeaderCell('อนุมัติ'),
-                    _buildHeaderCell('ไม่อนุมัติ', color: Colors.red),
-                  ],
-                ),
-                if (_loadingApprovers)
+              Table(
+                border: TableBorder.all(color: Colors.grey[600]!),
+                columnWidths: const {
+                  0: FixedColumnWidth(40), // No
+                  1: FlexColumnWidth(2), // Name
+                  2: FlexColumnWidth(1.5), // Approved
+                  3: FlexColumnWidth(1), // Not Approved
+                },
+                children: [
+                  // Table Header
                   TableRow(
+                    decoration: BoxDecoration(color: Colors.grey[200]),
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Center(
-                          child: SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Center(child: Text('กำลังโหลด...')),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: SizedBox(),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: SizedBox(),
-                      ),
+                      _buildHeaderCell('No'),
+                      _buildHeaderCell('Name'),
+                      _buildHeaderCell('อนุมัติ'),
+                      _buildHeaderCell('ไม่อนุมัติ', color: Colors.red),
                     ],
                   ),
-                if (!_loadingApprovers && _approvers.isNotEmpty)
-                  ..._approvers.asMap().entries.map((e) {
-                    final idx = e.key;
-                    final approver = e.value;
-                    final username = _extractUsername(approver).toString();
-                    final status =
-                        (approver['status'] ??
-                                approver['step_state'] ??
-                                approver['state'] ??
-                                approver['approved'] ??
-                                '')
-                            .toString();
-                    final at =
-                        (approver['approved_at'] ??
-                                approver['approvedAt'] ??
-                                approver['date'] ??
-                                approver['created_at'] ??
-                                '')
-                            .toString();
-                    final isApproved =
-                        status.toString().toLowerCase().contains('approved') ||
-                        approver['approved'] == true ||
-                        (approver['step_state'] != null &&
-                            approver['step_state'].toString().toLowerCase() ==
-                                'approved');
-                    final isRejected =
-                        status.toString().toLowerCase().contains('rejected') ||
-                        approver['approved'] == false ||
-                        (approver['step_state'] != null &&
-                            approver['step_state'].toString().toLowerCase() ==
-                                'rejected');
-
-                    // Determine whether logged-in user can act on this approver row
-                    final approverUserIdRaw =
-                        (approver['id'] ??
-                        approver['user_id'] ??
-                        approver['approver_id'] ??
-                        approver['approverId']);
-                    final approverUserId = approverUserIdRaw?.toString();
-                    final loggedUserId = Authen.requesterId?.toString();
-                    // User can act only when they are the approver and the overall request
-                    // is not already marked as final-rejected ('ไม่อนุมัติ').
-                    final canAct =
-                        approverUserId != null &&
-                        loggedUserId != null &&
-                        approverUserId == loggedUserId &&
-                        !overallRejected;
-
-                    return TableRow(
+                  if (_loadingApprovers)
+                    TableRow(
                       children: [
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: Center(child: Text('${idx + 1}')),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
                           child: Center(
-                            child: Text(
-                              username,
-                              style: TextStyle(
-                                color: Colors.blue[900],
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(6.0),
-                          child: Center(
-                            child: isApproved
-                                ? Column(
-                                    children: [
-                                      const Text(
-                                        'อนุมัติแล้ว',
-                                        style: TextStyle(
-                                          color: Colors.blue,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (at.isNotEmpty)
-                                        Text(
-                                          '${_formatCreatedDateOnly(at)} ${_formatCreatedTimeOnly(at)}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                    ],
-                                  )
-                                : (canAct
-                                      ? ElevatedButton(
-                                          onPressed: () =>
-                                              _approveApproverAt(idx),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.green,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 10.0,
-                                              horizontal: 18.0,
-                                            ),
-                                            textStyle: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          child: const Text('อนุมัติ'),
-                                        )
-                                      : const SizedBox()),
-                          ),
+                          padding: const EdgeInsets.all(8.0),
+                          child: Center(child: Text('กำลังโหลด...')),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(6.0),
-                          child: Center(
-                            child: isRejected
-                                ? Column(
-                                    children: [
-                                      const Text(
-                                        'ไม่อนุมัติ',
-                                        style: TextStyle(
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      if (at.isNotEmpty)
-                                        Text(
-                                          '${_formatCreatedDateOnly(at)} ${_formatCreatedTimeOnly(at)}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                    ],
-                                  )
-                                : isApproved
-                                ? const SizedBox()
-                                : (canAct
-                                      ? ElevatedButton(
-                                          onPressed: () =>
-                                              _rejectApproverAt(idx),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.redAccent,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 10.0,
-                                              horizontal: 18.0,
-                                            ),
-                                            textStyle: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          child: const Text('ไม่อนุมัติ'),
-                                        )
-                                      : const SizedBox()),
-                          ),
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: SizedBox(),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: SizedBox(),
                         ),
                       ],
-                    );
-                  }),
-                if (!_loadingApprovers && _approvers.isEmpty)
-                  TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Center(child: Text('-')),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Center(child: Text('ไม่มีข้อมูล')),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Center(child: Text('-')),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Center(child: Text('-')),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
+                    ),
+                  if (!_loadingApprovers && _approvers.isNotEmpty)
+                    ..._approvers.asMap().entries.map((e) {
+                      final idx = e.key;
+                      final approver = e.value;
+                      final username = _extractUsername(approver).toString();
+                      final status =
+                          (approver['status'] ??
+                                  approver['step_state'] ??
+                                  approver['state'] ??
+                                  approver['approved'] ??
+                                  '')
+                              .toString();
+                      final at =
+                          (approver['approved_at'] ??
+                                  approver['approvedAt'] ??
+                                  approver['date'] ??
+                                  approver['created_at'] ??
+                                  '')
+                              .toString();
+                      final isApproved =
+                          status.toString().toLowerCase().contains(
+                            'approved',
+                          ) ||
+                          approver['approved'] == true ||
+                          (approver['step_state'] != null &&
+                              approver['step_state'].toString().toLowerCase() ==
+                                  'approved');
+                      final isRejected =
+                          status.toString().toLowerCase().contains(
+                            'rejected',
+                          ) ||
+                          approver['approved'] == false ||
+                          (approver['step_state'] != null &&
+                              approver['step_state'].toString().toLowerCase() ==
+                                  'rejected');
+
+                      // Determine whether logged-in user can act on this approver row
+                      final approverUserIdRaw =
+                          (approver['id'] ??
+                          approver['user_id'] ??
+                          approver['approver_id'] ??
+                          approver['approverId']);
+                      final approverUserId = approverUserIdRaw?.toString();
+                      final loggedUserId = Authen.requesterId?.toString();
+                      // User can act only when they are the approver and the overall request
+                      // is not already marked as final-rejected ('ไม่อนุมัติ').
+                      final canAct =
+                          approverUserId != null &&
+                          loggedUserId != null &&
+                          approverUserId == loggedUserId &&
+                          !overallRejected;
+
+                      return TableRow(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Center(child: Text('${idx + 1}')),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Center(
+                              child: Text(
+                                username,
+                                style: TextStyle(
+                                  color: Colors.blue[900],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(6.0),
+                            child: Center(
+                              child: isApproved
+                                  ? Column(
+                                      children: [
+                                        const Text(
+                                          'อนุมัติแล้ว',
+                                          style: TextStyle(
+                                            color: Colors.blue,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (at.isNotEmpty)
+                                          Text(
+                                            '${_formatCreatedDateOnly(at)} ${_formatCreatedTimeOnly(at)}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                      ],
+                                    )
+                                  : (canAct
+                                        ? ElevatedButton(
+                                            onPressed: () =>
+                                                _approveApproverAt(idx),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 10.0,
+                                                    horizontal: 18.0,
+                                                  ),
+                                              textStyle: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            child: const Text('อนุมัติ'),
+                                          )
+                                        : const SizedBox()),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(6.0),
+                            child: Center(
+                              child: isRejected
+                                  ? Column(
+                                      children: [
+                                        const Text(
+                                          'ไม่อนุมัติ',
+                                          style: TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (at.isNotEmpty)
+                                          Text(
+                                            '${_formatCreatedDateOnly(at)} ${_formatCreatedTimeOnly(at)}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                      ],
+                                    )
+                                  : isApproved
+                                  ? const SizedBox()
+                                  : (canAct
+                                        ? ElevatedButton(
+                                            onPressed: () =>
+                                                _rejectApproverAt(idx),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.redAccent,
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 10.0,
+                                                    horizontal: 18.0,
+                                                  ),
+                                              textStyle: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            child: const Text('ไม่อนุมัติ'),
+                                          )
+                                        : const SizedBox()),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  if (!_loadingApprovers && _approvers.isEmpty)
+                    TableRow(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Center(child: Text('-')),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Center(child: Text('ไม่มีข้อมูล')),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(child: Text('-')),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Center(child: Text('-')),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ],
 
             // -------------------------------------------------------
             // Comments Section (ย้ายมาไว้ด้านล่างสุด)
@@ -1984,7 +1995,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ],
                 // Hide CloseJobButton when overall status_label indicates rejection,
                 // when the workflow is in phase 1, or when waiting for inspection
-                if (statusApproved && isDeptMT) ...[
+                if ((statusApproved ||
+                        statusLabelNormalized == 'ตรวจสอบไม่ผ่าน') &&
+                    isDeptMT) ...[
                   CloseJobButton(item: displayItem),
                   const SizedBox(width: 12),
                 ],
