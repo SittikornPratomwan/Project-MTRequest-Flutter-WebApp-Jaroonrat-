@@ -10,6 +10,7 @@ import '../../Authen/authen.dart';
 import 'closejob.dart';
 import 'document.dart';
 import 'usercheck.dart';
+import '../home.dart';
 
 // Data Model for detail page
 class PurchaseItem {
@@ -2059,8 +2060,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                 backgroundColor: Colors.green,
                               ),
                             );
-                            await _loadApproversForItem();
-                            await _loadCommentsForItem();
+
+                            // Navigate back to the home list and replace this
+                            // detail page so the home page reloads once.
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (ctx) => const PurchaseReportPage(),
+                              ),
+                            );
                           }
                           return;
                         }
