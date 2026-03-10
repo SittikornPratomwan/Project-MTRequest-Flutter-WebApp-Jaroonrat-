@@ -840,7 +840,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
             // Normalize URLs/paths and remove empties/duplicates
             final normalized = <String>[];
             for (final a in attachments) {
-              if (a == null) continue;
               final s = a.toString();
               if (s.isEmpty) continue;
               final url = _normalizeUrl(s);

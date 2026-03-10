@@ -728,49 +728,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
         ),
       ),
     );
-  }
-
-  // --- Helper Widgets ---
-
-  // สร้าง Radio Row สำหรับ Priority (มีข้อความแดงต่อท้าย)
-  Widget _buildRadioRow(String value, String note, Color noteColor) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 24,
-          height: 24,
-          child: Radio<String>(
-            value: value,
-            groupValue: _priority,
-            activeColor: const Color(0xFF1976D2),
-            onChanged: (v) => setState(() => _priority = v),
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF2D3748),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            note,
-            style: TextStyle(
-              color: noteColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Note: simple location radio removed (not saved to API)
+  } // Note: simple location radio removed (not saved to API)
 
   // สร้าง Row แบบ Label : Input Field
   Widget _buildTextFieldRow({
