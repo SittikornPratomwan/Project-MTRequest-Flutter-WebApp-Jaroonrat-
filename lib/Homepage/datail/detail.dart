@@ -1985,19 +1985,74 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   // User check button (pass/fail)
                   UserCheckButton(
                     item: displayItem,
-                    onChecked: (status, [remark]) {
+                    onChecked: (status, [remark]) async {
                       if (status == 'passed') {
-                        _handleRequesterAccept();
+                        await _handleRequesterAccept();
                         return;
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'ผลการตรวจสอบ: ไม่ผ่าน${remark != null ? ' — $remark' : ''}',
+
+                      // Failed case: call reject-check API with comment in body
+                      String? id = _currentRepairRequestId ?? widget.item?.id;
+                      if (id == null || id.isEmpty)
+                        id = await _resolveIdFromList();
+                      if (id == null || id.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('ไม่พบ ID สำหรับส่งผลการตรวจสอบ'),
                           ),
-                          backgroundColor: Colors.redAccent,
-                        ),
+                        );
+                        return;
+                      }
+
+                      final uri = Uri.parse(
+                        '$_baseHost/repair-requests/$id/reject-check',
                       );
+                      final headers = _authHeaders(json: true);
+                      final bodyMap = <String, dynamic>{
+                        'comment': remark ?? '',
+                      };
+
+                      try {
+                        final resp = await http
+                            .post(
+                              uri,
+                              headers: headers,
+                              body: jsonEncode(bodyMap),
+                            )
+                            .timeout(const Duration(seconds: 10));
+                        debugPrint(
+                          'reject-check response: ${resp.statusCode} ${resp.body}',
+                        );
+                        if (resp.statusCode == 200 ||
+                            resp.statusCode == 201 ||
+                            resp.statusCode == 204) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'ส่งผลการตรวจสอบ: ไม่ผ่าน เรียบร้อยแล้ว',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            await _loadApproversForItem();
+                            await _loadCommentsForItem();
+                          }
+                          return;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('การส่งผลการตรวจสอบล้มเหลว'),
+                          ),
+                        );
+                      } catch (e) {
+                        debugPrint('Error calling reject-check: $e');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('เกิดข้อผิดพลาด ขณะส่งผลการตรวจสอบ'),
+                          ),
+                        );
+                      }
                     },
                   ),
                   const SizedBox(width: 12),
