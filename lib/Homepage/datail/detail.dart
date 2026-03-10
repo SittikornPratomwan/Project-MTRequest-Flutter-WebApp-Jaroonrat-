@@ -1187,6 +1187,10 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     final bool waitingForInspection =
         statusLabelNormalized == 'รอตรวจรับงาน' ||
         statusLabelNormalized == 'ตรวจสอบไม่ผ่าน';
+    // Show the requester check button only when explicitly waiting for
+    // requester inspection (รอตรวจรับงาน). Do not show when
+    // status_label == 'ตรวจสอบไม่ผ่าน'.
+    final bool showUserCheck = statusLabelNormalized == 'รอตรวจรับงาน';
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -2001,7 +2005,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   CloseJobButton(item: displayItem),
                   const SizedBox(width: 12),
                 ],
-                if (waitingForInspection && _isCreatorOf(displayItem)) ...[
+                if (showUserCheck && _isCreatorOf(displayItem)) ...[
                   // User check button (pass/fail)
                   UserCheckButton(
                     item: displayItem,

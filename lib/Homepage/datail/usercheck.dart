@@ -63,7 +63,7 @@ class UserCheckButton extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('ไม่ผ่าน - ระบุหมายเหตุ (ไม่บังคับ)'),
+        title: const Text('ไม่ผ่าน - ระบุหมายเหตุ (บังคับ)'),
         content: TextField(controller: controller, maxLines: 3),
         actions: [
           TextButton(
@@ -84,7 +84,6 @@ class UserCheckButton extends StatelessWidget {
         content: Text(
           'ผลตรวจสอบ: ไม่ผ่าน${remark.isNotEmpty ? ' — $remark' : ''}',
         ),
-        backgroundColor: Colors.redAccent,
       ),
     );
     if (onChecked != null) onChecked!('failed', remark.isEmpty ? null : remark);
