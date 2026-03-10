@@ -1475,26 +1475,32 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   ),
                 ),
                 // If API indicated overall rejection via status_label, show fixed text and red color
-                Text(
-                  overallRejected
-                      ? 'ไม่อนุมัติ'
-                      : (waitingForInspection
-                            ? 'รอตรวจสอบ'
-                            : (raw['status_label'] ??
-                                          raw['statusLabel'] ??
-                                          displayItem.status)
-                                      ?.toString() ??
-                                  displayItem.status),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: overallRejected
+                Builder(
+                  builder: (ctx) {
+                    final rawStatus =
+                        (raw['status_label'] ??
+                                raw['statusLabel'] ??
+                                displayItem.status)
+                            ?.toString() ??
+                        displayItem.status;
+                    final displayStatus = overallRejected
+                        ? 'ไม่อนุมัติ'
+                        : (waitingForInspection
+                              ? 'รอตรวจสอบ'
+                              : (rawStatus.trim() == 'อนุมัติ'
+                                    ? 'กำลังดำเนินการ'
+                                    : rawStatus));
+                    final statusColor = overallRejected
                         ? Colors.red
-                        : ((displayItem.status == 'อนุมัติ' ||
-                                  (raw['status_label'] ?? raw['statusLabel']) ==
-                                      'อนุมัติ')
-                              ? Colors.green
-                              : Colors.orange[800]),
-                  ),
+                        : (statusApproved ? Colors.green : Colors.orange[800]);
+                    return Text(
+                      displayStatus,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: statusColor,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
