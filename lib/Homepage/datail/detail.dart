@@ -234,6 +234,13 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(approve ? 'อนุมัติสำเร็จ' : 'ไม่อนุมัติสำเร็จ')),
       );
+      // If this was an approval action, navigate back to the home list and
+      // replace this detail page so the home will reload once.
+      if (approve) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (ctx) => const PurchaseReportPage()),
+        );
+      }
       return true;
     }
 

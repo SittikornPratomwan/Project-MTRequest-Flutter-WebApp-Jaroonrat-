@@ -1426,8 +1426,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                       ); // default grey
                                     }
 
-                                    final displayStatus =
-                                        low.contains('อนุมัติ')
+                                    final displayStatus = s.trim() == 'อนุมัติ'
                                         ? 'กำลังดำเนินการ'
                                         : s;
                                     return Text(
