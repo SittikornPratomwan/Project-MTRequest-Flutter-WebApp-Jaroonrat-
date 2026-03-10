@@ -1426,8 +1426,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                       ); // default grey
                                     }
 
+                                    final displayStatus =
+                                        low.contains('อนุมัติ')
+                                        ? 'กำลังดำเนินการ'
+                                        : s;
                                     return Text(
-                                      s,
+                                      displayStatus,
                                       style: TextStyle(
                                         color: color,
                                         fontSize: 14,
