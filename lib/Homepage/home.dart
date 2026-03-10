@@ -1217,7 +1217,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                           val == 0);
                                     }
 
-                                    // ซ่อนจุดแจ้งเตือนหากผู้ใช้กดเปิดดูใน session ปัจจุบันแล้ว (_readIds.contains)
+                                    // .....ซ่อนจุดแจ้งเตือนหากผู้ใช้กดเปิดดูใน session ปัจจุบันแล้ว (_readIds.contains)
                                     final bool showNewMessageIcon =
                                         hasNewMsgFromApi &&
                                         !_readIds.contains(item.id);
