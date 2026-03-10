@@ -437,6 +437,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   final List<String> _statusOptions = [
     'ทั้งหมด',
     'รออนุมัติ',
+    'กำลังดำเนินการ',
     'รอช่างอนุมัติ',
     'รอตรวจรับงาน',
     'เสร็จสิ้น',
@@ -484,6 +485,13 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         switch (selectedStatus) {
           case 'รออนุมัติ':
             return normalized == 'รออนุมัติ';
+          case 'กำลังดำเนินการ':
+            // include items whose raw status_label is exactly 'กำลังดำเนินการ'
+            // or backend uses 'อนุมัติ' (mapped/displayed as 'กำลังดำเนินการ')
+            return normalized == 'กำลังดำเนินการ' ||
+                normalized == 'อนุมัติ' ||
+                normalized.contains('ดำเนิน') ||
+                normalized.contains('กำลัง');
           case 'รอช่างอนุมัติ':
             return normalized == 'รอช่างอนุมัติ';
           case 'รอตรวจรับงาน':
