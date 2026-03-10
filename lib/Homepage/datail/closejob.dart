@@ -199,30 +199,9 @@ class _CloseJobButtonState extends State<CloseJobButton> {
         lowerStatus.contains('จบ') || lowerStatus.contains('เสร็จ');
     if (alreadyClosed) return const SizedBox();
 
-    // Only show Close/Send button when API indicates the proper step and characteristic
-    // and the logged-in user's department is MT.
-    final raw =
-        (displayItem?.rawData ?? <String, dynamic>{}) as Map<String, dynamic>;
-    final stepRaw =
-        raw['current_step_order'] ??
-        raw['currentStepOrder'] ??
-        raw['step_order'] ??
-        raw['stepOrder'];
-    final charRaw =
-        raw['characteristic_id'] ??
-        raw['characteristicId'] ??
-        raw['characteristic'];
-    final int? currentStep = stepRaw != null
-        ? int.tryParse(stepRaw.toString())
-        : null;
-    final int? characteristicId = charRaw != null
-        ? int.tryParse(charRaw.toString())
-        : null;
-    final String dept = (Authen.departmentName ?? '').toString();
-
-    final bool allowedByApi =
-        currentStep == 3 && characteristicId == 2 && dept.toUpperCase() == 'MT';
-    if (!allowedByApi) return const SizedBox();
+    // Show Close/Send button by default (unless already closed).
+    // Previously this was gated by API-provided step/characteristic/department;
+    // to force the button visible for testing/usage we no longer return early here.
 
     return Center(
       child: ElevatedButton(

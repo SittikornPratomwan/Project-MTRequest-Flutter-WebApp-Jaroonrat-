@@ -1172,6 +1172,16 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         stepOrderRaw != null &&
         (stepOrderRaw.toString() == '1' ||
             (stepOrderRaw is int && stepOrderRaw == 1));
+    // Also expose a flag for step == 3 so UI can show the "ส่งงาน" button
+    final bool isStepThree =
+        stepOrderRaw != null &&
+        (stepOrderRaw.toString() == '3' ||
+            (stepOrderRaw is int && stepOrderRaw == 3));
+    // Expose flag when API reports final-approved status_label == 'อนุมัติ'
+    final bool statusApproved = statusLabelRaw.trim() == 'อนุมัติ';
+    // Check logged-in user's department name (require MT)
+    final String _loggedDept = (Authen.departmentName ?? '').toString().trim();
+    final bool isDeptMT = _loggedDept.toUpperCase() == 'MT';
     // If API reports waiting-for-acceptance, map to 'รอตรวจสอบ' and hide close button
     final String statusLabelNormalized = statusLabelRaw.trim();
     final bool waitingForInspection = statusLabelNormalized == 'รอตรวจรับงาน';
@@ -1974,9 +1984,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 ],
                 // Hide CloseJobButton when overall status_label indicates rejection,
                 // when the workflow is in phase 1, or when waiting for inspection
-                if (!overallRejected &&
-                    !isPhaseOne &&
-                    !waitingForInspection) ...[
+                if (statusApproved && isDeptMT) ...[
                   CloseJobButton(item: displayItem),
                   const SizedBox(width: 12),
                 ],
