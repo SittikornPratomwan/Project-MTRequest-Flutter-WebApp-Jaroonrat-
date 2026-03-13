@@ -206,7 +206,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   Future<List<PurchaseItem>> fetchRepairRequests(int limit, int offset) async {
     try {
       final uri = Uri.parse(
-        'http://26.99.205.41:9000/drugs/repair-requests?limit=$limit&offset=$offset',
+        'http://192.168.20.101:9091/drugs/repair-requests?limit=$limit&offset=$offset',
       );
 
       final headers = <String, String>{'Content-Type': 'application/json'};
@@ -324,7 +324,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       }
 
       final uri = Uri.parse(
-        'http://26.99.205.41:9000/drugs/repair-requests/pending-approval/by-user?user_id=${Authen.requesterId}',
+        'http://192.168.20.101:9091/drugs/repair-requests/pending-approval/by-user?user_id=${Authen.requesterId}',
       );
 
       final headers = <String, String>{'Content-Type': 'application/json'};

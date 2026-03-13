@@ -16,7 +16,7 @@ class DocumentPage extends StatefulWidget {
 }
 
 class _DocumentPageState extends State<DocumentPage> {
-  final String _baseHost = 'http://26.99.205.41:9000/drugs';
+  final String _baseHost = 'http://192.168.20.101:9091/drugs';
 
   List<String> _fileUrls = [];
   bool _loadingFiles = false;

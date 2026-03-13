@@ -252,7 +252,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
 
       final response = await http
           .post(
-            Uri.parse('http://26.99.205.41:9000/drugs/repair-requests'),
+            Uri.parse('http://192.168.20.101:9091/drugs/repair-requests'),
             headers: headers,
             body: jsonEncode(payload),
           )
@@ -288,7 +288,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
             final file = _images[i];
             try {
               final uri = Uri.parse(
-                'http://26.99.205.41:9000/drugs/repair-requests/$createdId/files',
+                'http://192.168.20.101:9091/drugs/repair-requests/$createdId/files',
               );
               final req = http.MultipartRequest('POST', uri);
 

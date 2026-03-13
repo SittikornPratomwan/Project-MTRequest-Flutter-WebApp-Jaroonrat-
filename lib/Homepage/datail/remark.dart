@@ -32,7 +32,7 @@ Future<Map<String, dynamic>?> showRemarkDialog(
 
     try {
       // If there are images selected, upload them first and collect attachment paths.
-      final baseHost = 'http://26.99.205.41:9000/drugs';
+      final baseHost = 'http://192.168.20.101:9091/drugs';
       final List<String> attachments = [];
       if (images.isNotEmpty) {
         final uriUpload = Uri.parse(

@@ -13,7 +13,7 @@ class CloseJobButton extends StatefulWidget {
 }
 
 class _CloseJobButtonState extends State<CloseJobButton> {
-  final String _baseHost = 'http://26.99.205.41:9000/drugs';
+  final String _baseHost = 'http://192.168.20.101:9091/drugs';
   bool _loading = false;
 
   Map<String, String> _authHeaders({bool json = false}) {
