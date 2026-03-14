@@ -94,7 +94,7 @@ class PurchaseDetailPage extends StatefulWidget {
 }
 
 class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
-  final String _baseHost = 'http://192.168.20.101:9091/drugs';
+  final String _baseHost = 'http://26.99.205.41:9000/drugs';
   List<String> _fileUrls = [];
   bool _loadingFiles = false;
   String? _currentFetchId;
@@ -586,7 +586,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
 
     debugPrint(
-      'Fetching files for id: $id from URL: $_baseHost/repair-requests/$id/files',
+      'Fetching files for id: $id from URL: $_baseHost/drugs/repair-requests/$id/files',
     );
     await _fetchFilesForId(id);
   }
@@ -615,7 +615,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
 
     debugPrint(
-      'Fetching comments for id: $id from URL: $_baseHost/repair-requests/$id/comments',
+      'Fetching comments for id: $id from URL: $_baseHost/drugs/repair-requests/$id/comments',
     );
     await _fetchCommentsForId(id);
   }
