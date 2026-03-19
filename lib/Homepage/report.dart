@@ -232,6 +232,13 @@ class _ReportPageState extends State<ReportPage> {
       return _monthLabelFromValue(rawMonth);
     }
     final text = rawMonth.toString().trim();
+    final yearMonthMatch = RegExp(r'^(\d{4})-(\d{1,2})$').firstMatch(text);
+    if (yearMonthMatch != null) {
+      final monthPart = int.tryParse(yearMonthMatch.group(2) ?? '');
+      if (monthPart != null) {
+        return _monthLabelFromValue(monthPart);
+      }
+    }
     final parsed = int.tryParse(text);
     if (parsed != null) {
       return _monthLabelFromValue(parsed);
@@ -253,6 +260,16 @@ class _ReportPageState extends State<ReportPage> {
 
       final rows = _extractItemList(data)
           .map((item) {
+            final rawMonth =
+                item['month'] ??
+                item['month_no'] ??
+                item['monthNumber'] ??
+                item['month_number'] ??
+                item['month_name'] ??
+                item['monthName'] ??
+                item['label'] ??
+                item['name'] ??
+                item['key'];
             final monthValue = _findFirstInt(item, [
               'month',
               'month_no',
@@ -260,6 +277,7 @@ class _ReportPageState extends State<ReportPage> {
               'month_number',
             ]);
             final monthLabel = _findFirstString(item, [
+              'month',
               'month_name',
               'monthName',
               'label',
@@ -275,11 +293,11 @@ class _ReportPageState extends State<ReportPage> {
             ]);
 
             return _MonthlySummaryItem(
-              monthLabel: monthLabel.isNotEmpty
-                  ? monthLabel
-                  : _normalizeMonthLabel(
-                      monthValue == 0 ? item['key'] : monthValue,
-                    ),
+              monthLabel: _normalizeMonthLabel(
+                monthLabel.isNotEmpty
+                    ? monthLabel
+                    : (monthValue == 0 ? rawMonth : monthValue),
+              ),
               count: count,
             );
           })
