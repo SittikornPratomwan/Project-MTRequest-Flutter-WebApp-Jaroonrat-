@@ -5,8 +5,7 @@ class UserCheckButton extends StatelessWidget {
   final dynamic item;
   final void Function(String status, [String? remark])? onChecked;
 
-  const UserCheckButton({Key? key, this.item, this.onChecked})
-    : super(key: key);
+  const UserCheckButton({super.key, this.item, this.onChecked});
 
   @override
   Widget build(BuildContext context) {
