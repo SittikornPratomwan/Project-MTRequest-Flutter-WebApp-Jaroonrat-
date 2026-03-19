@@ -474,7 +474,8 @@ class _ReportPageState extends State<ReportPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('MTrequest Report'),
-        backgroundColor: Colors.grey[300],
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         actions: [
@@ -491,13 +492,8 @@ class _ReportPageState extends State<ReportPage> {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              'รายงานงานซ่อม',
+              'รายผลการแจ้งซ่อม',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'สรุปข้อมูลจาก API แบบเลือกปีและเดือน พร้อมใช้ token จากการเข้าสู่ระบบปัจจุบัน',
-              style: TextStyle(color: Colors.grey[700]),
             ),
             const SizedBox(height: 16),
             _buildSummarySection(),
