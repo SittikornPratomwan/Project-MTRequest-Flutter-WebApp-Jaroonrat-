@@ -533,7 +533,6 @@ class _ReportPageState extends State<ReportPage> {
 
     return _ReportSectionCard(
       title: '1. จำนวนใบงานรายเดือน',
-      subtitle: 'ดึงจาก /repair-requests/reports/year-summary?year=...',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -612,8 +611,6 @@ class _ReportPageState extends State<ReportPage> {
 
     return _ReportSectionCard(
       title: '2. แผนกแจ้งหมวดอะไรเท่าไหร่',
-      subtitle:
-          'ดึงจาก /repair-requests/reports/by-dept-category?year=...&month=...',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -727,8 +724,6 @@ class _ReportPageState extends State<ReportPage> {
 
     return _ReportSectionCard(
       title: '3. หมวดไหนถูกแจ้งซ่อมเท่าไหร่',
-      subtitle:
-          'ดึงจาก /repair-requests/reports/by-category?year=...&month=...',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -907,12 +902,12 @@ class _ReportPageState extends State<ReportPage> {
 class _ReportSectionCard extends StatelessWidget {
   const _ReportSectionCard({
     required this.title,
-    required this.subtitle,
     required this.child,
+    this.subtitle,
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
   final Widget child;
 
   @override
@@ -937,8 +932,10 @@ class _ReportSectionCard extends StatelessWidget {
             title,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 4),
-          Text(subtitle, style: TextStyle(color: Colors.grey[700])),
+          if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(subtitle!, style: TextStyle(color: Colors.grey[700])),
+          ],
           const SizedBox(height: 16),
           child,
         ],
