@@ -162,6 +162,34 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return map[priority.toLowerCase()] ?? priority;
   }
 
+  String _normalizeDisplayStatus(String raw) {
+    final status = raw.trim();
+    if (status == 'อนุมัติ') return 'กำลังดำเนินการ';
+    if (status == 'รอการอนุมัติ') return 'รออนุมัติ';
+    if (status == 'รอตรวจสอบ') return 'รอตรวจรับงาน';
+    return status;
+  }
+
+  Color _statusColorFor(String raw) {
+    switch (_normalizeDisplayStatus(raw)) {
+      case 'รออนุมัติ':
+      case 'รอช่างอนุมัติ':
+        return const Color(0xFFFACC15);
+      case 'กำลังดำเนินการ':
+        return const Color(0xFF3B82F6);
+      case 'ตรวจสอบไม่ผ่าน':
+        return const Color(0xFFFB923C);
+      case 'ไม่อนุมัติ':
+        return const Color(0xFF374151);
+      case 'เสร็จสิ้น':
+        return const Color(0xFF22C55E);
+      case 'รอตรวจรับงาน':
+        return const Color(0xFFA855F7);
+      default:
+        return const Color(0xFF4A5568);
+    }
+  }
+
   // ฟังก์ชันเลือก reqDate ตามค่า current_phase (ยังคงไว้ใช้กับวันที่ได้)
   String _getReqDate(
     dynamic currentPhase,
@@ -1466,45 +1494,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                                 child: Builder(
                                   builder: (context) {
-                                    final s =
+                                    final rawStatus =
                                         (item.rawData != null
                                                 ? (item.rawData!['status_label'] ??
                                                       item.rawData!['statusLabel'])
                                                 : null)
                                             ?.toString() ??
                                         item.status.toString();
-                                    final low = s.toLowerCase();
-                                    Color color;
-                                    if (low.contains('ไม่อนุมัติ') ||
-                                        low.contains('ยกเลิก') ||
-                                        low.contains('reject') ||
-                                        low.contains('rejected')) {
-                                      color = const Color(
-                                        0xFFC53030,
-                                      ); // red for rejected
-                                    } else if (low.contains('เสร็จ') ||
-                                        low.contains('สำเร็จ') ||
-                                        low.contains('เสร็จสิ้น')) {
-                                      color = const Color(0xFF38A169); // green
-                                    } else if (low.contains('ตรวจรับ') ||
-                                        low.contains('ตรวจ')) {
-                                      color = const Color(0xFF2B6CB0); // blue
-                                    } else if (low.contains('อนุมัติ') ||
-                                        low.contains('รอ')) {
-                                      color = const Color(0xFFF6E05E); // yellow
-                                    } else {
-                                      color = const Color(
-                                        0xFF4A5568,
-                                      ); // default grey
-                                    }
-
-                                    final displayStatus = s.trim() == 'อนุมัติ'
-                                        ? 'กำลังดำเนินการ'
-                                        : s;
+                                    final displayStatus =
+                                        _normalizeDisplayStatus(rawStatus);
                                     return Text(
                                       displayStatus,
                                       style: TextStyle(
-                                        color: color,
+                                        color: _statusColorFor(rawStatus),
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),

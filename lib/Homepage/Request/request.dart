@@ -81,7 +81,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
 
   final Map<int, String> _characteristicOptions = {
     1: 'สร้าง',
-    2: 'ปรับปรุง',
+    2: 'สั่งทำ',
     3: 'ซ่อม',
   };
 
