@@ -79,6 +79,17 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
   void initState() {
     super.initState();
     _loadData();
+    _refreshPendingApprovalCount();
+  }
+
+  Future<void> _refreshPendingApprovalCount() async {
+    try {
+      final count = await fetchPendingApprovalCount();
+      if (!mounted) return;
+      setState(() {
+        _pendingApprovalCount = count;
+      });
+    } catch (_) {}
   }
 
   void _loadData([int? offsetOverride]) {
@@ -307,13 +318,61 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         );
       }).toList();
 
-      // Keep pending approval count updated
-      _pendingApprovalCount = purchaseItems.length;
       return purchaseItems;
     } catch (e) {
       _showSnack('Error fetching data: $e', error: true);
       return [];
     }
+  }
+
+  Future<int> fetchPendingApprovalCount() async {
+    if (Authen.requesterId == null) {
+      return 0;
+    }
+
+    final uri = Uri.parse(
+      'http://26.99.205.41:9000/drugs/repair-requests/pending-approval/by-user?user_id=${Authen.requesterId}',
+    );
+
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (Authen.token != null && Authen.token!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${Authen.token}';
+    }
+
+    final response = await http
+        .get(uri, headers: headers)
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load pending approval count: ${response.statusCode}',
+      );
+    }
+
+    final jsonData = jsonDecode(response.body);
+
+    if (jsonData is List) {
+      return jsonData.length;
+    }
+
+    if (jsonData is Map) {
+      if (jsonData.containsKey('total')) {
+        final total = jsonData['total'];
+        if (total is int) {
+          return total;
+        }
+        return int.tryParse(total.toString()) ?? 0;
+      }
+
+      for (final key in const ['data', 'results', 'items', 'repair_requests']) {
+        final value = jsonData[key];
+        if (value is List) {
+          return value.length;
+        }
+      }
+    }
+
+    return 0;
   }
 
   // ฟังก์ชันเรียก API สำหรับรายการที่รอการอนุมัติ
@@ -695,6 +754,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 _currentPage = 1;
                 _loadData(0);
               });
+              _refreshPendingApprovalCount();
             },
           ),
         ],
@@ -939,6 +999,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                           _searchKeyword = '';
                           _keywordController.clear();
                         });
+                        _refreshPendingApprovalCount();
                       },
                       icon: const Icon(Icons.list, size: 18),
                       label: const Text('ทั้งหมด'),
@@ -958,7 +1019,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                     ElevatedButton.icon(
                       onPressed: _showPendingApprovalItems,
                       icon: const Icon(Icons.pending_actions, size: 18),
-                      label: Text('รายการที่รอคุณอนุมัติ'),
+                      label: Text(
+                        'รายการที่รอคุณอนุมัติ (${_pendingApprovalCount})',
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFED8936),
                         foregroundColor: Colors.white,
@@ -986,6 +1049,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             _currentPage = 1;
                             _loadData();
                           });
+                          _refreshPendingApprovalCount();
                         }
                       },
                       icon: const Icon(Icons.add, size: 18),

@@ -17,6 +17,7 @@ class DocumentPage extends StatefulWidget {
 
 class _DocumentPageState extends State<DocumentPage> {
   final String _baseHost = 'http://26.99.205.41:9000/drugs';
+  static const int _maxApproverColumnsPerPdfTable = 3;
 
   List<String> _fileUrls = [];
   bool _loadingFiles = false;
@@ -164,6 +165,143 @@ class _DocumentPageState extends State<DocumentPage> {
       if (m != null) return '${m.group(3)}/${m.group(2)}/${m.group(1)}';
       return raw;
     }
+  }
+
+  List<List<dynamic>> _chunkApprovers(
+    List<dynamic> approvers, {
+    required int chunkSize,
+  }) {
+    if (approvers.isEmpty) {
+      return const [];
+    }
+
+    final chunks = <List<dynamic>>[];
+    for (var index = 0; index < approvers.length; index += chunkSize) {
+      final end = (index + chunkSize < approvers.length)
+          ? index + chunkSize
+          : approvers.length;
+      chunks.add(approvers.sublist(index, end));
+    }
+    return chunks;
+  }
+
+  pw.Widget _buildPdfApprovalTable(List<dynamic> approvers) {
+    final chunks = _chunkApprovers(
+      approvers,
+      chunkSize: _maxApproverColumnsPerPdfTable,
+    );
+
+    if (chunks.isEmpty) {
+      return pw.Table(
+        border: pw.TableBorder.all(width: 0.5),
+        children: [
+          pw.TableRow(
+            children: [
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(6),
+                child: pw.Center(
+                  child: pw.Text(
+                    'ไม่มีข้อมูลผู้อนุมัติ',
+                    style: pw.TextStyle(fontSize: 9),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        for (var chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) ...[
+          if (chunkIndex > 0) pw.SizedBox(height: 8),
+          pw.Table(
+            border: pw.TableBorder.all(width: 0.5),
+            columnWidths: {
+              for (var i = 0; i < chunks[chunkIndex].length; i++)
+                i: const pw.FlexColumnWidth(1),
+            },
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                children: List.generate(chunks[chunkIndex].length, (i) {
+                  final approverNumber =
+                      chunkIndex * _maxApproverColumnsPerPdfTable + i + 1;
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Center(
+                      child: pw.Text(
+                        'ผู้อนุมัติ $approverNumber',
+                        style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              pw.TableRow(
+                children: List.generate(chunks[chunkIndex].length, (i) {
+                  final name = _extractUsername(chunks[chunkIndex][i]);
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 4,
+                    ),
+                    child: pw.Center(
+                      child: pw.Text(name, style: pw.TextStyle(fontSize: 9)),
+                    ),
+                  );
+                }),
+              ),
+              pw.TableRow(
+                children: List.generate(chunks[chunkIndex].length, (i) {
+                  final approver = chunks[chunkIndex][i];
+                  final approved = _isApproved(approver);
+                  final rejected = _isRejected(approver);
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Row(
+                          children: [
+                            pw.Text(
+                              approved ? '● ' : '○ ',
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
+                            pw.Text(
+                              'อนุมัติ',
+                              style: pw.TextStyle(fontSize: 9),
+                            ),
+                          ],
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Row(
+                          children: [
+                            pw.Text(
+                              rejected ? '● ' : '○ ',
+                              style: pw.TextStyle(fontSize: 10),
+                            ),
+                            pw.Text(
+                              'ไม่อนุมัติ',
+                              style: pw.TextStyle(fontSize: 9),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _printDocument() async {
@@ -427,118 +565,7 @@ class _DocumentPageState extends State<DocumentPage> {
               pw.SizedBox(height: 10),
 
               // Approval Table
-              pw.Table(
-                border: pw.TableBorder.all(width: 0.5),
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(2),
-                  1: const pw.FlexColumnWidth(2.5),
-                  2: const pw.FlexColumnWidth(2),
-                },
-                children: [
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(
-                      color: PdfColors.grey200,
-                    ),
-                    children: [
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Center(
-                          child: pw.Text(
-                            'Fac.Mgr.',
-                            style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold,
-                              fontSize: 9,
-                            ),
-                          ),
-                        ),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Center(
-                          child: pw.Text(
-                            'Fac.Mgr./MKTDir./HR.Dir.',
-                            style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold,
-                              fontSize: 9,
-                            ),
-                          ),
-                        ),
-                      ),
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Center(
-                          child: pw.Text(
-                            'Div.Mgr./Line Mgr.',
-                            style: pw.TextStyle(
-                              fontWeight: pw.FontWeight.bold,
-                              fontSize: 9,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.TableRow(
-                    children: List.generate(3, (i) {
-                      final name = i < _approvers.length
-                          ? _extractUsername(_approvers[i])
-                          : '';
-                      return pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 4,
-                        ),
-                        child: pw.Center(
-                          child: pw.Text(
-                            name,
-                            style: pw.TextStyle(fontSize: 9),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                  pw.TableRow(
-                    children: List.generate(3, (i) {
-                      final a = i < _approvers.length ? _approvers[i] : null;
-                      final approved = a != null ? _isApproved(a) : false;
-                      final rejected = a != null ? _isRejected(a) : false;
-                      return pw.Padding(
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Row(
-                              children: [
-                                pw.Text(
-                                  approved ? '● ' : '○ ',
-                                  style: pw.TextStyle(fontSize: 10),
-                                ),
-                                pw.Text(
-                                  'อนุมัติ',
-                                  style: pw.TextStyle(fontSize: 9),
-                                ),
-                              ],
-                            ),
-                            pw.SizedBox(height: 2),
-                            pw.Row(
-                              children: [
-                                pw.Text(
-                                  rejected ? '● ' : '○ ',
-                                  style: pw.TextStyle(fontSize: 10),
-                                ),
-                                pw.Text(
-                                  'ไม่อนุมัติ',
-                                  style: pw.TextStyle(fontSize: 9),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
+              _buildPdfApprovalTable(_approvers),
             ],
           ),
         ],
@@ -834,70 +861,7 @@ class _DocumentPageState extends State<DocumentPage> {
               const SizedBox(height: 16),
 
               // ── Approval Table ─────────────────────────────────────────────────────────────
-              Table(
-                border: TableBorder.all(color: Colors.grey.shade500),
-                columnWidths: const {
-                  0: FlexColumnWidth(2),
-                  1: FlexColumnWidth(2.5),
-                  2: FlexColumnWidth(2),
-                },
-                children: [
-                  // Role headers
-                  TableRow(
-                    decoration: BoxDecoration(color: Colors.grey.shade200),
-                    children: [
-                      _roleHeader('Fac.Mgr.'),
-                      _roleHeader('Fac.Mgr./MKTDir./HR.Dir.'),
-                      _roleHeader('Div.Mgr./Line Mgr.'),
-                    ],
-                  ),
-                  // Approver names
-                  TableRow(
-                    children: List.generate(3, (i) {
-                      final name = i < _approvers.length
-                          ? _extractUsername(_approvers[i])
-                          : '';
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 6,
-                          horizontal: 4,
-                        ),
-                        child: Center(
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                  // Approval status / Rejection status
-                  TableRow(
-                    children: List.generate(3, (i) {
-                      final a = i < _approvers.length ? _approvers[i] : null;
-                      final approved = a != null && _isApproved(a);
-                      final rejected = a != null && _isRejected(a);
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 8,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _approvalRadio('อนุมัติ', approved),
-                            const SizedBox(height: 4),
-                            _approvalRadio('ไม่อนุมัติ', rejected),
-                          ],
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
+              _buildApprovalTable(),
               const SizedBox(height: 30),
             ],
           ),
@@ -1017,6 +981,88 @@ class _DocumentPageState extends State<DocumentPage> {
     padding: EdgeInsets.only(bottom: 6),
     child: SizedBox(height: 14),
   );
+
+  Widget _buildApprovalTable() {
+    if (_loadingApprovers) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_approvers.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade400),
+        ),
+        child: const Text(
+          'ไม่มีข้อมูลผู้อนุมัติ',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Table(
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        border: TableBorder.all(color: Colors.grey.shade500),
+        children: [
+          TableRow(
+            decoration: BoxDecoration(color: Colors.grey.shade200),
+            children: List.generate(_approvers.length, (index) {
+              return _roleHeader('ผู้อนุมัติ ${index + 1}');
+            }),
+          ),
+          TableRow(
+            children: List.generate(_approvers.length, (index) {
+              final name = _extractUsername(_approvers[index]);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                child: SizedBox(
+                  width: 180,
+                  child: Center(
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          TableRow(
+            children: List.generate(_approvers.length, (index) {
+              final approver = _approvers[index];
+              final approved = _isApproved(approver);
+              final rejected = _isRejected(approver);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                child: SizedBox(
+                  width: 180,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _approvalRadio('อนุมัติ', approved),
+                      const SizedBox(height: 4),
+                      _approvalRadio('ไม่อนุมัติ', rejected),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Header cell for approval
   Widget _roleHeader(String text) => Padding(
