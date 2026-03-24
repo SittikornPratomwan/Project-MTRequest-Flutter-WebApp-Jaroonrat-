@@ -728,6 +728,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDeptMT =
+        (Authen.departmentName ?? '').trim().toUpperCase() == 'MT';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
@@ -1062,38 +1065,40 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RequestFormPage(),
+                    if (!isDeptMT) ...[
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RequestFormPage(),
+                            ),
+                          );
+                          // Refresh data if form was submitted successfully
+                          if (result == true) {
+                            setState(() {
+                              _currentPage = 1;
+                              _loadData();
+                            });
+                            _refreshPendingApprovalCount();
+                          }
+                        },
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('แจ้งซ่อมใหม่'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF48BB78),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                        );
-                        // Refresh data if form was submitted successfully
-                        if (result == true) {
-                          setState(() {
-                            _currentPage = 1;
-                            _loadData();
-                          });
-                          _refreshPendingApprovalCount();
-                        }
-                      },
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('แจ้งซ่อมใหม่'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF48BB78),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ],
