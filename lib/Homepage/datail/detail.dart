@@ -464,8 +464,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 backgroundColor: Colors.green,
               ),
             );
-            await _loadApproversForItem();
-            await _loadCommentsForItem();
+            Navigator.of(context).pop(true);
           }
           return;
         }
@@ -489,8 +488,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                 backgroundColor: Colors.green,
               ),
             );
-            await _loadApproversForItem();
-            await _loadCommentsForItem();
+            Navigator.of(context).pop(true);
           }
           return;
         }
