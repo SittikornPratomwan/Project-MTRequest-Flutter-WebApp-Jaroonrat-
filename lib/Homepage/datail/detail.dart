@@ -898,6 +898,124 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     return 'ไม่มีข้อมูล';
   }
 
+  int? _parseApproverStepOrder(dynamic approver) {
+    if (approver is! Map) return null;
+
+    final candidates = [
+      approver['step_order'],
+      approver['stepOrder'],
+      approver['current_step_order'],
+      approver['currentStepOrder'],
+      approver['order'],
+      approver['step'] is Map ? approver['step']['order'] : null,
+      approver['approval_step'] is Map
+          ? approver['approval_step']['order']
+          : null,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      if (candidate is int) return candidate;
+      final parsed = int.tryParse(candidate.toString());
+      if (parsed != null) return parsed;
+    }
+
+    return null;
+  }
+
+  bool _isApproverApproved(dynamic approver) {
+    final status =
+        (approver['status'] ??
+                approver['step_state'] ??
+                approver['state'] ??
+                approver['approved'] ??
+                '')
+            .toString()
+            .toLowerCase();
+
+    return status.contains('approved') ||
+        approver['approved'] == true ||
+        (approver['step_state'] != null &&
+            approver['step_state'].toString().toLowerCase() == 'approved');
+  }
+
+  bool _isApproverRejected(dynamic approver) {
+    final status =
+        (approver['status'] ??
+                approver['step_state'] ??
+                approver['state'] ??
+                approver['approved'] ??
+                '')
+            .toString()
+            .toLowerCase();
+
+    return status.contains('rejected') ||
+        approver['approved'] == false ||
+        (approver['step_state'] != null &&
+            approver['step_state'].toString().toLowerCase() == 'rejected');
+  }
+
+  bool _isApproverInCurrentTurn(
+    dynamic approver,
+    int index,
+    int? currentStepOrder,
+  ) {
+    if (_isApproverApproved(approver) || _isApproverRejected(approver)) {
+      return false;
+    }
+
+    final stepState =
+        (approver['step_state'] ??
+                approver['state'] ??
+                approver['status'] ??
+                '')
+            .toString()
+            .trim()
+            .toLowerCase();
+    final approverStepOrder = _parseApproverStepOrder(approver);
+    final pendingApprovers = _approvers
+        .where(
+          (item) => !_isApproverApproved(item) && !_isApproverRejected(item),
+        )
+        .toList();
+
+    if (currentStepOrder != null && approverStepOrder != null) {
+      return approverStepOrder == currentStepOrder;
+    }
+
+    if (approverStepOrder != null) {
+      final pendingStepOrders = pendingApprovers
+          .map(_parseApproverStepOrder)
+          .whereType<int>()
+          .toList();
+
+      if (pendingStepOrders.isNotEmpty) {
+        final earliestPendingStep = pendingStepOrders.reduce(
+          (value, element) => value < element ? value : element,
+        );
+        return approverStepOrder == earliestPendingStep;
+      }
+    }
+
+    if (stepState.isNotEmpty) {
+      if (stepState.contains('current') ||
+          stepState.contains('active') ||
+          stepState.contains('in_progress')) {
+        return true;
+      }
+
+      if (stepState.contains('approved') || stepState.contains('rejected')) {
+        return false;
+      }
+    }
+
+    final firstPendingIndex = _approvers.indexWhere(
+      (item) => !_isApproverApproved(item) && !_isApproverRejected(item),
+    );
+
+    return firstPendingIndex == index;
+  }
+
   String _formatCreatedAt(String raw) {
     if (raw.isEmpty) return '-';
     try {
@@ -1113,6 +1231,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         raw['currentStepOrder'] ??
         raw['step_order'] ??
         raw['stepOrder'];
+    final int? currentStepOrder = stepOrderRaw == null
+        ? null
+        : (stepOrderRaw is int
+              ? stepOrderRaw
+              : int.tryParse(stepOrderRaw.toString()));
     final bool isStepOne =
         stepOrderRaw != null &&
         (stepOrderRaw.toString() == '1' ||
@@ -1534,22 +1657,8 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                   approver['created_at'] ??
                                   '')
                               .toString();
-                      final isApproved =
-                          status.toString().toLowerCase().contains(
-                            'approved',
-                          ) ||
-                          approver['approved'] == true ||
-                          (approver['step_state'] != null &&
-                              approver['step_state'].toString().toLowerCase() ==
-                                  'approved');
-                      final isRejected =
-                          status.toString().toLowerCase().contains(
-                            'rejected',
-                          ) ||
-                          approver['approved'] == false ||
-                          (approver['step_state'] != null &&
-                              approver['step_state'].toString().toLowerCase() ==
-                                  'rejected');
+                      final isApproved = _isApproverApproved(approver);
+                      final isRejected = _isApproverRejected(approver);
 
                       // Determine whether logged-in user can act on this approver row
                       final approverUserIdRaw =
@@ -1559,13 +1668,22 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                           approver['approverId']);
                       final approverUserId = approverUserIdRaw?.toString();
                       final loggedUserId = Authen.requesterId?.toString();
+                      final isCurrentTurn = _isApproverInCurrentTurn(
+                        approver,
+                        idx,
+                        currentStepOrder,
+                      );
                       // User can act only when they are the approver and the overall request
-                      // is not already marked as final-rejected ('ไม่อนุมัติ').
+                      // is not already marked as final-rejected and the workflow
+                      // is currently waiting on this approver's step.
                       final canAct =
                           approverUserId != null &&
                           loggedUserId != null &&
                           approverUserId == loggedUserId &&
+                          isCurrentTurn &&
                           !overallRejected;
+                      final showWaitingForApproval =
+                          !isApproved && !isRejected && !canAct;
 
                       return TableRow(
                         children: [
@@ -1627,7 +1745,31 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                             ),
                                             child: const Text('อนุมัติ'),
                                           )
-                                        : const SizedBox()),
+                                        : (showWaitingForApproval
+                                              ? Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Text(
+                                                      'กำลังรอ',
+                                                      style: TextStyle(
+                                                        color: Colors.orange,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      '$username อนุมัติ',
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.black54,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                              : const SizedBox())),
                             ),
                           ),
                           Padding(
@@ -1674,7 +1816,14 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                                             ),
                                             child: const Text('ไม่อนุมัติ'),
                                           )
-                                        : const SizedBox()),
+                                        : (showWaitingForApproval
+                                              ? const Text(
+                                                  '-',
+                                                  style: TextStyle(
+                                                    color: Colors.black45,
+                                                  ),
+                                                )
+                                              : const SizedBox())),
                             ),
                           ),
                         ],
