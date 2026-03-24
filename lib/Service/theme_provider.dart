@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Lightweight shared theme flag used by pages that support manual theme toggle.
 class AppTheme {
   AppTheme._();
 
@@ -16,7 +17,7 @@ class AppTheme {
     _listeners.remove(listener);
   }
 
-  // Helper to toggle theme for testing/demo
+  /// Toggle theme mode and notify every registered listener.
   static void toggleTheme() {
     _isDark = !_isDark;
     for (final l in List<VoidCallback>.from(_listeners)) {

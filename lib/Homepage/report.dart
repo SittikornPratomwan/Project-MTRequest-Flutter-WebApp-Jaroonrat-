@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../Authen/authen.dart';
+import '../Service/mt_request_api.dart';
 
+/// Reporting dashboard for yearly, category, and department summaries.
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
 
@@ -13,7 +15,7 @@ class ReportPage extends StatefulWidget {
 }
 
 class _ReportPageState extends State<ReportPage> {
-  static const String _baseUrl = 'http://26.99.205.41:9000/drugs';
+  static const String _baseUrl = MtRequestApi.baseUrl;
 
   final List<int> _years = List<int>.generate(7, (index) => 2024 + index);
   final List<_MonthOption> _months = const [
@@ -69,6 +71,7 @@ class _ReportPageState extends State<ReportPage> {
     ]);
   }
 
+  /// Build headers for report endpoints while keeping authorization optional.
   Map<String, String> _buildHeaders() {
     final headers = <String, String>{'Content-Type': 'application/json'};
     final token = Authen.token;
@@ -78,6 +81,7 @@ class _ReportPageState extends State<ReportPage> {
     return headers;
   }
 
+  /// Fetch a report payload and normalize API errors into readable messages.
   Future<dynamic> _getReportData(
     String path,
     Map<String, String> queryParameters,
@@ -88,7 +92,7 @@ class _ReportPageState extends State<ReportPage> {
 
     final response = await http
         .get(uri, headers: _buildHeaders())
-        .timeout(const Duration(seconds: 15));
+        .timeout(MtRequestApi.reportTimeout);
 
     if (response.statusCode != 200) {
       String message = 'โหลดข้อมูลไม่สำเร็จ (${response.statusCode})';
@@ -112,6 +116,7 @@ class _ReportPageState extends State<ReportPage> {
     return jsonDecode(response.body);
   }
 
+  /// Convert API payloads with varying shapes into a list-like structure.
   List<Map<String, dynamic>> _extractItemList(dynamic source) {
     if (source == null) {
       return const [];
@@ -185,6 +190,7 @@ class _ReportPageState extends State<ReportPage> {
     ];
   }
 
+  /// Pick the first non-empty string from a list of candidate keys.
   String _findFirstString(Map<String, dynamic> item, List<String> keys) {
     for (final key in keys) {
       final value = item[key];
@@ -195,6 +201,7 @@ class _ReportPageState extends State<ReportPage> {
     return '';
   }
 
+  /// Pick the first numeric value from a list of candidate keys.
   int _findFirstInt(Map<String, dynamic> item, List<String> keys) {
     for (final key in keys) {
       final value = item[key];

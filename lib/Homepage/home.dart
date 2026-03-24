@@ -1,5 +1,3 @@
-// ignore_for_file: unused_field, unused_element
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -7,50 +5,9 @@ import './Request/request.dart';
 import './datail/detail.dart';
 import './report.dart';
 import '../Authen/authen.dart';
+import '../Service/mt_request_api.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Purchase Report',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: const Color(0xFF1976D2),
-        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-        fontFamily: 'Sans-serif',
-        textTheme: TextTheme(
-          headlineSmall: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1A202C),
-          ),
-          labelLarge: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF2D3748),
-          ),
-          bodyMedium: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Color(0xFF4A5568),
-          ),
-        ),
-      ),
-      home: const PurchaseReportPage(),
-    );
-  }
-}
-
-// ---------------------------------------------------------
-// 1. Data Model: ใช้ PurchaseItem จาก detail.dart
-// ---------------------------------------------------------
-
+/// Main dashboard for browsing, filtering, and opening MT requests.
 class PurchaseReportPage extends StatefulWidget {
   const PurchaseReportPage({super.key});
 
@@ -61,12 +18,10 @@ class PurchaseReportPage extends StatefulWidget {
 class _PurchaseReportPageState extends State<PurchaseReportPage> {
   late Future<List<PurchaseItem>> _futureItems;
   PurchaseItem? _selectedItem;
-  // Set of IDs marked as read in this session
   final Set<String> _readIds = <String>{};
-  bool _showPendingApproval = false; // Flag to show pending approval items
-  int _pendingApprovalCount = 0; // Count of pending approval items
+  bool _showPendingApproval = false;
+  int _pendingApprovalCount = 0;
 
-  // Pagination variables
   int _currentPage = 1;
   int _limit = 15;
   int _totalItems = 0;
@@ -82,6 +37,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     _refreshPendingApprovalCount();
   }
 
+  /// Refresh the badge count used by the pending approval shortcut button.
   Future<void> _refreshPendingApprovalCount() async {
     try {
       final count = await fetchPendingApprovalCount();
@@ -92,6 +48,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     } catch (_) {}
   }
 
+  /// Load list data for the current page and rebuild filter options from results.
   void _loadData([int? offsetOverride]) {
     final offset = offsetOverride ?? _offset;
     _futureItems = fetchRepairRequests(_limit, offset);
@@ -107,7 +64,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     });
   }
 
-  // Load and show pending-approval items (reset filters and update count)
+  /// Switch the table to the current user's pending approval queue.
   void _showPendingApprovalItems() {
     setState(() {
       _showPendingApproval = true;
@@ -121,22 +78,22 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     _futureItems.then((items) {
       setState(() {
         _pendingApprovalCount = items.length;
-        // Pending-approval list is typically not paginated by this UI
         _hasMoreData = false;
       });
     });
   }
 
+  /// Update page size and restart pagination from the first page.
   void _changeLimit(int newLimit) {
     if (newLimit == _limit) return;
     setState(() {
       _limit = newLimit;
       _currentPage = 1;
-      // When changing page size, fetch from offset=0 per requirement
       _loadData(0);
     });
   }
 
+  /// Move to a specific page while respecting current bounds.
   void _goToPage(int page) {
     if (page < 1) return;
     if (_totalItems > 0 && page > _totalPages) return;
@@ -156,12 +113,13 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     _goToPage(_currentPage - 1);
   }
 
-  // ฟังก์ชันแปล priority จากภาษาอังกฤษเป็นไทย
+  /// Convert priority codes from the API into labels used by the UI.
   String _translatePriority(String priority) {
     final map = {'normal': 'ปกติ', 'urgent': 'เร่งรีบ', 'project': 'กำหนดเอง'};
     return map[priority.toLowerCase()] ?? priority;
   }
 
+  /// Normalize similar backend statuses into a smaller display vocabulary.
   String _normalizeDisplayStatus(String raw) {
     final status = raw.trim();
     if (status == 'อนุมัติ') return 'กำลังดำเนินการ';
@@ -170,6 +128,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return status;
   }
 
+  /// Map each normalized status to the color used in the table.
   Color _statusColorFor(String raw) {
     switch (_normalizeDisplayStatus(raw)) {
       case 'รออนุมัติ':
@@ -190,7 +149,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     }
   }
 
-  // ฟังก์ชันเลือก reqDate ตามค่า current_phase (ยังคงไว้ใช้กับวันที่ได้)
+  /// Pick the most useful date field for the request deadline column.
   String _getReqDate(
     dynamic currentPhase,
     dynamic dueDate,
@@ -205,47 +164,12 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return requestDate?.toString() ?? createdDate?.toString() ?? 'รอการอนุมัติ';
   }
 
-  // Map selected status dropdown value to display label
-  String _statusLabelForSelected(int sel) {
-    if (sel == 1) return 'รอการอนุมัติ';
-    if (sel == 2) return 'กำลังดำเนินการ';
-    if (sel == 3) return 'ดำเนินการสำเร็จ';
-    return '';
-  }
-
-  // Map a raw status string to one of the status categories used in the dropdown
-  String _mapStatusToCategory(String raw) {
-    final s = raw.toLowerCase();
-    if (s.contains('ไม่อนุมัติ') ||
-        s.contains('ยกเลิก') ||
-        s.contains('reject') ||
-        s.contains('rejected')) {
-      return 'ไม่ผ่านการอนุมัติ';
-    }
-    if (s.contains('รอช่าง') || (s.contains('รอ') && s.contains('ช่าง'))) {
-      return 'รอช่างอนุมัติ';
-    }
-    if (s.contains('ตรวจ') || s.contains('inspection')) {
-      return 'รอตรวจรับงาน';
-    }
-    if (s.contains('เสร็จ') ||
-        s.contains('สำเร็จ') ||
-        s.contains('complete') ||
-        s.contains('finish') ||
-        s.contains('อนุมัติ')) {
-      return 'เสร็จสิ้น';
-    }
-    if (s.contains('รอ') || s.contains('pending') || s.contains('wait')) {
-      return 'รออนุมัติ';
-    }
-    return 'อื่นๆ';
-  }
-
-  // ฟังก์ชันเรียก API
+  /// Fetch paged repair requests and normalize the response into table rows.
   Future<List<PurchaseItem>> fetchRepairRequests(int limit, int offset) async {
     try {
-      final uri = Uri.parse(
-        'http://26.99.205.41:9000/drugs/repair-requests?limit=$limit&offset=$offset',
+      final uri = MtRequestApi.uri(
+        '/repair-requests',
+        queryParameters: {'limit': limit, 'offset': offset},
       );
 
       final headers = <String, String>{'Content-Type': 'application/json'};
@@ -255,7 +179,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
       final response = await http
           .get(uri, headers: headers)
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -265,10 +189,8 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
       final jsonData = jsonDecode(response.body);
 
-      // Handle different response formats
       List<dynamic> items = [];
 
-      // Extract total count if available
       if (jsonData is Map && jsonData.containsKey('total')) {
         _totalItems = jsonData['total'] is int
             ? jsonData['total']
@@ -358,8 +280,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       return 0;
     }
 
-    final uri = Uri.parse(
-      'http://26.99.205.41:9000/drugs/repair-requests/pending-approval/by-user?user_id=${Authen.requesterId}',
+    final uri = MtRequestApi.uri(
+      '/repair-requests/pending-approval/by-user',
+      queryParameters: {'user_id': Authen.requesterId},
     );
 
     final headers = <String, String>{'Content-Type': 'application/json'};
@@ -369,7 +292,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
     final response = await http
         .get(uri, headers: headers)
-        .timeout(const Duration(seconds: 10));
+        .timeout(MtRequestApi.requestTimeout);
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -403,15 +326,16 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return 0;
   }
 
-  // ฟังก์ชันเรียก API สำหรับรายการที่รอการอนุมัติ
+  /// Fetch the records that are waiting for the logged-in user to approve.
   Future<List<PurchaseItem>> fetchPendingApprovalRequests() async {
     try {
       if (Authen.requesterId == null) {
         throw Exception('User ID not found. Please login again.');
       }
 
-      final uri = Uri.parse(
-        'http://26.99.205.41:9000/drugs/repair-requests/pending-approval/by-user?user_id=${Authen.requesterId}',
+      final uri = MtRequestApi.uri(
+        '/repair-requests/pending-approval/by-user',
+        queryParameters: {'user_id': Authen.requesterId},
       );
 
       final headers = <String, String>{'Content-Type': 'application/json'};
@@ -421,7 +345,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
       final response = await http
           .get(uri, headers: headers)
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -515,11 +439,9 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     }
   }
 
-  // ตัวแปรสำหรับ Filter
   String? selectedPriority = 'ทั้งหมด';
-  int selectedRadio = 0; // 0=All, 1=Finished, etc.
+  int selectedRadio = 0;
   List<String> _priorityOptions = ['ทั้งหมด'];
-  // สถานะตัวกรอง (dropdown)
   String selectedStatus = 'ทั้งหมด';
   final List<String> _statusOptions = [
     'ทั้งหมด',
@@ -531,29 +453,24 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     'ไม่ผ่านการอนุมัติ',
   ];
 
-  // ตัวแปรสำหรับ Search
   String _searchBy = 'รหัส';
   final TextEditingController _keywordController = TextEditingController();
   String _searchKeyword = '';
 
-  // ฟังก์ชันกรองข้อมูลตามความสำคัญ (ใช้ค่า priority จาก API)
+  /// Apply client-side filters after the API payload has been normalized.
   List<PurchaseItem> _filterItems(List<PurchaseItem> items) {
-    // If showing pending approval items, don't apply additional filters
-    // as the API already filtered them
     if (_showPendingApproval) {
       return items;
     }
 
     List<PurchaseItem> filtered = items;
 
-    // Filter by priority
     if (selectedPriority != null && selectedPriority != 'ทั้งหมด') {
       filtered = filtered
           .where((item) => item.type == selectedPriority)
           .toList();
     }
 
-    // Filter by status from dropdown
     if (selectedStatus != 'ทั้งหมด') {
       filtered = filtered.where((item) {
         final rawLabel =
@@ -568,13 +485,10 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
         final normalized =
             rawLabel ?? item.status.toString().trim().toLowerCase();
 
-        // Exact-match filtering per user's mapping
         switch (selectedStatus) {
           case 'รออนุมัติ':
             return normalized == 'รออนุมัติ';
           case 'กำลังดำเนินการ':
-            // include items whose raw status_label is exactly 'กำลังดำเนินการ'
-            // or backend uses 'อนุมัติ' (mapped/displayed as 'กำลังดำเนินการ')
             return normalized == 'กำลังดำเนินการ' ||
                 normalized == 'อนุมัติ' ||
                 normalized.contains('ดำเนิน') ||
@@ -586,7 +500,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           case 'เสร็จสิ้น':
             return normalized == 'เสร็จสิ้น';
           case 'ไม่ผ่านการอนุมัติ':
-            // user asked to map this to status_label == 'ไม่อนุมัติ'
             return normalized == 'ไม่อนุมัติ';
           default:
             return false;
@@ -594,8 +507,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       }).toList();
     }
 
-    // Filter by status (support multiple backend formats):
-    // 0=all, 1=รอการอนุมัติ, 2=กำลังดำเนินการ, 3=งานที่จบแล้ว
     if (selectedRadio != 0) {
       filtered = filtered.where((item) {
         final statusLabel = item.status.toLowerCase();
@@ -621,21 +532,17 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       }).toList();
     }
 
-    // Filter by search keyword
     if (_searchKeyword.isNotEmpty) {
       filtered = filtered.where((item) {
         if (_searchBy == 'รหัส') {
-          // ค้นหาจาก job_no
           return item.no.toLowerCase().contains(_searchKeyword.toLowerCase());
         } else {
-          // ค้นหาจาก search_tsv (ในข้อมูลดิบ)
           if (item.rawData != null && item.rawData!.containsKey('search_tsv')) {
             final searchTsv = item.rawData!['search_tsv']?.toString() ?? '';
             return searchTsv.toLowerCase().contains(
               _searchKeyword.toLowerCase(),
             );
           }
-          // fallback: ค้นหาจาก topic
           return item.topic.toLowerCase().contains(
             _searchKeyword.toLowerCase(),
           );
@@ -646,14 +553,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     return filtered;
   }
 
-  // ฟังก์ชันค้นหา
+  /// Sync the current keyword field into the active filter state.
   void _performSearch() {
     setState(() {
       _searchKeyword = _keywordController.text.trim();
     });
   }
 
-  // Calculate remaining days until a given date
+  /// Calculate how many days remain before the requested due date.
   int _getRemainingDays(String dateString) {
     if (dateString.isEmpty || dateString == '-') return -1;
     try {
@@ -666,7 +573,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     }
   }
 
-  // Format a datetime string to date-only (YYYY-MM-DD). If parsing fails, return original or '-'.
+  /// Format many backend date shapes into a single DD/MM/YYYY format.
   String _formatDateOnly(String raw) {
     if (raw.isEmpty) return '-';
     try {
@@ -676,18 +583,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       final d = dt.day.toString().padLeft(2, '0');
       return '$d/$m/$y';
     } catch (_) {
-      // Fallback: try to handle common date string formats like
-      // YYYY-MM-DD or YYYY/MM/DD or DD-MM-YYYY etc., and convert to DD/MM/YYYY
       String part = raw;
       if (raw.contains(' ')) part = raw.split(' ').first;
       if (part.contains('-')) {
         final seg = part.split('-');
         if (seg.length >= 3) {
-          // If first segment looks like year (4 chars) assume YYYY-MM-DD
           if (seg[0].length == 4) {
             return '${seg[2].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[0]}';
           } else {
-            // Assume already DD-MM-YYYY -> convert separators
             return '${seg[0].padLeft(2, '0')}/${seg[1].padLeft(2, '0')}/${seg[2]}';
           }
         }
@@ -706,7 +609,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
     }
   }
 
-  // Small helper to show SnackBar messages from async contexts
+  /// Centralize async SnackBar handling to avoid context timing issues.
   void _showSnack(String message, {bool error = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -792,9 +695,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
       ),
       body: Column(
         children: [
-          // ------------------------------------
-          // 2. Search / Filter Section (ด้านบน)
-          // ------------------------------------
           Container(
             width: MediaQuery.of(context).size.width,
             margin: EdgeInsets.zero,
@@ -806,7 +706,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Row 1: Priority & Radio Buttons
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
@@ -893,7 +792,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 ),
                 const SizedBox(height: 10),
 
-                // Row 2: Search Inputs & Buttons (left flexible, right fixed)
                 Row(
                   children: [
                     Expanded(
@@ -954,7 +852,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                             ),
                           ),
                           const SizedBox(width: 5),
-                          // Expanded search input stretches to the right up to fixed buttons
                           Expanded(
                             child: SizedBox(
                               height: 36,
@@ -1003,7 +900,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Fixed right-aligned buttons: ค้นหาข้อมูล, ทั้งหมด, รายการที่รอคุณอนุมัติ, แจ้งซ่อมใหม่
                     ElevatedButton(
                       onPressed: _performSearch,
                       style: ElevatedButton.styleFrom(
@@ -1107,7 +1003,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
 
           const Divider(thickness: 1),
 
-          // Header "MTrequest REPORT" (tappable)
           Center(
             child: InkWell(
               onTap: () {
@@ -1138,9 +1033,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
               ),
             ),
           ),
-          // ------------------------------------
-          // 3. Data Table Section (ตาราง)
-          // ------------------------------------
           Expanded(
             child: FutureBuilder<List<PurchaseItem>>(
               future: _futureItems,
@@ -1491,7 +1383,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                                 ),
                               ),
                             ),
-                            // New cell: show status_label from API (colored)
                             DataCell(
                               Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -1530,9 +1421,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
             ),
           ),
 
-          // ------------------------------------
-          // 4. Pagination Controls
-          // ------------------------------------
           Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
@@ -1544,7 +1432,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Page size selector
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1592,7 +1479,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                   ],
                 ),
 
-                // Previous button
                 ElevatedButton.icon(
                   onPressed: _currentPage > 1 ? _previousPage : null,
                   icon: const Icon(Icons.arrow_back, size: 16),
@@ -1617,7 +1503,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 ),
                 const SizedBox(width: 12),
 
-                // Page info (compact)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -1639,7 +1524,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
                 ),
                 const SizedBox(width: 12),
 
-                // Next button
                 ElevatedButton.icon(
                   onPressed: _hasMoreData ? _nextPage : null,
                   icon: const Icon(Icons.arrow_forward, size: 16),
@@ -1667,30 +1551,6 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> {
           ),
         ],
       ),
-    );
-  }
-
-  // Widget ช่วยสร้าง Radio Button
-  Widget _buildRadioOption(int value, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Radio<int>(
-          value: value,
-          groupValue: selectedRadio,
-          activeColor: const Color(0xFF1976D2),
-          onChanged: (int? v) => setState(() => selectedRadio = v!),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Color(0xFF2D3748),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 }

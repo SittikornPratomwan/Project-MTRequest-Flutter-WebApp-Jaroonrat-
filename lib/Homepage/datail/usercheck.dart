@@ -23,6 +23,7 @@ class UserCheckButton extends StatelessWidget {
     );
   }
 
+  /// Open the inspection result flow and optionally collect a remark on failure.
   Future<void> _openDialog(BuildContext context) async {
     final choice = await showDialog<String?>(
       context: context,
@@ -57,7 +58,6 @@ class UserCheckButton extends StatelessWidget {
       return;
     }
 
-    // If failed, ask for optional remark
     final controller = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,

@@ -5,46 +5,9 @@ import 'package:http_parser/http_parser.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 import '../../Authen/authen.dart';
+import '../../Service/mt_request_api.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Purchase Request Form',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: const Color(0xFF1976D2),
-        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-        fontFamily: 'Sans-serif',
-        textTheme: TextTheme(
-          headlineSmall: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1A202C),
-          ),
-          labelLarge: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF2D3748),
-          ),
-          bodyMedium: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Color(0xFF4A5568),
-          ),
-        ),
-      ),
-      home: const RequestFormPage(),
-    );
-  }
-}
-
+/// Form page used to create a new repair request and upload supporting images.
 class RequestFormPage extends StatefulWidget {
   const RequestFormPage({super.key});
 
@@ -53,20 +16,17 @@ class RequestFormPage extends StatefulWidget {
 }
 
 class _RequestFormPageState extends State<RequestFormPage> {
-  // ตัวแปร State สำหรับเก็บค่าที่เลือก
   String? _priority = 'ด่วน';
   late DateTime _requestDate;
   final ImagePicker _picker = ImagePicker();
   final List<XFile> _images = [];
-  final Map<int, Uint8List> _imageBytes = {}; // เก็บ bytes สำหรับแสดงบน Web
+  final Map<int, Uint8List> _imageBytes = {};
   bool _isSubmitting = false;
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  // Category and characteristic selections (display Thai, send numeric id)
   int? _categoryId;
   int? _characteristicId;
 
-  // Hardcoded option lists from DB (display names in Thai)
   final Map<int, String> _categoryOptions = {
     1: 'ไฟฟ้า',
     2: 'ประปา',
@@ -91,7 +51,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
     _requestDate = DateTime.now();
   }
 
-  // ฟังก์ชันแปลงวันที่เป็นรูปแบบไทย (dd/mm/yyyy)
+  /// Format the chosen date for the Thai display in the form.
   String _formatThaiDate(DateTime date) {
     final months = [
       'มกราคม',
@@ -109,11 +69,11 @@ class _RequestFormPageState extends State<RequestFormPage> {
     ];
     final day = date.day.toString().padLeft(2, '0');
     final month = months[date.month - 1];
-    final year = (date.year + 543).toString(); // Convert to Buddhist Era
+    final year = (date.year + 543).toString();
     return '$day / $month / $year';
   }
 
-  // ฟังก์ชันแปลง priority ให้เป็นค่าที่ API ต้องการ
+  /// Convert the UI priority label into the API enum value.
   String _mapPriority(String? priority) {
     switch (priority) {
       case 'ด่วน':
@@ -127,7 +87,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
     }
   }
 
-  // ฟังก์ชันแปลงวันที่เป็นรูปแบบ yyyy-mm-dd
+  /// Convert the selected date into the API format.
   String _formatDateForApi(DateTime date) {
     final year = date.year;
     final month = date.month.toString().padLeft(2, '0');
@@ -135,7 +95,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
     return '$year-$month-$day';
   }
 
-  // ฟังก์ชันส่งข้อมูลไป API
+  /// Submit the new request and upload attachments when the API returns an id.
   Future<void> _submitRequest() async {
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(
@@ -147,31 +107,24 @@ class _RequestFormPageState extends State<RequestFormPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      // สร้าง payload (เรียงลำดับและไม่ส่งค่า null สำหรับ id)
       final Map<String, dynamic> payload = {
         'title': _titleController.text,
         'description': _descriptionController.text,
         'priority': _mapPriority(_priority),
         'required_date': _formatDateForApi(_requestDate),
-        // workflow / status
         'status_code': 'in_approval',
         'current_status': 'new',
         'current_step_order': 1,
-        // location / extra (l_id will be set from Authen if available)
       };
 
-      // Prefer numeric IDs when available; otherwise include name/division
       if (Authen.requesterId != null) {
         payload['requester_id'] = Authen.requesterId;
       } else {
         payload['name'] = Authen.userName ?? '';
       }
-      //
-      //----------------------------------------------------------------------------------------------------------------
-      //  แปลงเลข department เป็น dp_id ให้ backend แทนการส่งชื่อ division แบบเดิม เพื่อความแม่นยำในการจัดหมวดหมู่และรายงานผล
-      //------------------------------------------------------------------------------------------------------------------------------
-      //
-      // Map department names to numeric dp_id when possible
+
+      // Keep the department to id mapping close to submission because it is part
+      // of the payload contract with the backend.
       final Map<String, int> deptMap = {
         'MT': 1,
         'HR': 2,
@@ -192,19 +145,16 @@ class _RequestFormPageState extends State<RequestFormPage> {
         if (divKey.isNotEmpty && deptMap.containsKey(divKey)) {
           payload['dp_id'] = deptMap[divKey];
         } else if (divRaw.isNotEmpty) {
-          // If no mapping, keep the human-readable division for backend fallback
           payload['division'] = divRaw;
         }
       }
 
-      // Include l_id from login if available, otherwise keep default 1
       if (Authen.lId != null) {
         payload['l_id'] = Authen.lId;
       } else {
         payload['l_id'] = 1;
       }
 
-      // Include username (prefer full name from login, fallback to login username)
       if (Authen.userName != null && Authen.userName!.isNotEmpty) {
         payload['username'] = Authen.userName;
       } else if (Authen.loginUsername != null &&
@@ -212,19 +162,16 @@ class _RequestFormPageState extends State<RequestFormPage> {
         payload['username'] = Authen.loginUsername;
       }
 
-      // Include department_name from login if available
       if (Authen.departmentName != null && Authen.departmentName!.isNotEmpty) {
         payload['department_name'] = Authen.departmentName;
       } else if (Authen.division != null && Authen.division!.isNotEmpty) {
         payload['department_name'] = Authen.division;
       }
 
-      // Include selected category_id and characteristic_id (numeric ids)
       if (_categoryId != null) payload['category_id'] = _categoryId;
       if (_characteristicId != null)
         payload['characteristic_id'] = _characteristicId;
 
-      // Log payload with one key:value per line for readability
       final payloadLines = payload.entries
           .map((e) {
             final k = e.key;
@@ -252,11 +199,11 @@ class _RequestFormPageState extends State<RequestFormPage> {
 
       final response = await http
           .post(
-            Uri.parse('http://26.99.205.41:9000/drugs/repair-requests'),
+            MtRequestApi.uri('/repair-requests'),
             headers: headers,
             body: jsonEncode(payload),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
 
       print('Response status: ${response.statusCode}');
       print('Response body: ${response.body}');
@@ -264,7 +211,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
       if (!mounted) return;
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Try to parse returned id for uploading files
         String? createdId;
         try {
           final respJson = jsonDecode(response.body);
@@ -273,7 +219,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
                 respJson['id']?.toString() ??
                 respJson['repair_request_id']?.toString() ??
                 respJson['job_no']?.toString();
-            // nested under data?
             createdId ??= respJson['data'] is Map
                 ? respJson['data']['id']?.toString()
                 : null;
@@ -282,35 +227,24 @@ class _RequestFormPageState extends State<RequestFormPage> {
           print('Failed to decode creation response: $e');
         }
 
-        // If we have files and we got an id, upload each file
         if (createdId != null && _images.isNotEmpty) {
           for (var i = 0; i < _images.length; i++) {
             final file = _images[i];
             try {
-              final uri = Uri.parse(
-                'http://26.99.205.41:9000/drugs/repair-requests/$createdId/files',
-              );
+              final uri = MtRequestApi.uri('/repair-requests/$createdId/files');
               final req = http.MultipartRequest('POST', uri);
 
-              // Attach token to multipart upload if available
               if (Authen.token != null && Authen.token!.isNotEmpty) {
                 req.headers['Authorization'] = 'Bearer ${Authen.token}';
                 print('Including Authorization header for file upload');
               }
 
-              // Include the created repair request id so the server can associate files
-              // with the newly created request. Add both camelCase and snake_case
-              // variants in case the backend expects one of them.
               req.fields['repairRequestId'] = createdId;
               req.fields['repair_request_id'] = createdId;
 
-              // ใช้ bytes สำหรับ Web (fromPath ใช้ไม่ได้บน Web)
               final bytes = await file.readAsBytes();
-
-              // เริ่มจากเดิมชื่อไฟล์จาก client (อาจเป็นชื่อที่ browser/OS ให้มา)
               final origName = file.name;
 
-              // ระบุ content-type ของไฟล์ โดยดูจากนามสกุลถ้ามี
               String mimeType = 'image/jpeg';
               final lower = origName.toLowerCase();
               if (lower.endsWith('.png')) {
@@ -323,25 +257,22 @@ class _RequestFormPageState extends State<RequestFormPage> {
                 mimeType = 'image/jpeg';
               }
 
-              // sanitize ชื่อไฟล์: เอาเฉพาะตัวอักษร ภาษาอังกฤษ ตัวเลข จุด ขีด และ underscore
               String safeName = origName.replaceAll(
                 RegExp(r'[^A-Za-z0-9_.-]'),
                 '_',
               );
 
-              // ถ้าไม่มีนามสกุล ให้เติมจาก mimeType
               if (!safeName.contains('.')) {
                 final ext = mimeType.split('/').last;
                 safeName = '$safeName.$ext';
               }
 
-              // เพิ่ม timestamp เพื่อป้องกันการชนของชื่อไฟล์บน server
               final uploadName =
                   '${DateTime.now().millisecondsSinceEpoch}_$safeName';
 
               req.files.add(
                 http.MultipartFile.fromBytes(
-                  'files', // ลองใช้ 'files' แทน 'file'
+                  'files',
                   bytes,
                   filename: uploadName,
                   contentType: MediaType.parse(mimeType),
@@ -353,7 +284,7 @@ class _RequestFormPageState extends State<RequestFormPage> {
               print('Content-Type: $mimeType, Size: ${bytes.length} bytes');
 
               final streamed = await req.send().timeout(
-                const Duration(seconds: 20),
+                MtRequestApi.uploadTimeout,
               );
               final respStr = await streamed.stream.bytesToString();
               print(
@@ -384,7 +315,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
           ),
         );
 
-        // Clear form
         _titleController.clear();
         _descriptionController.clear();
         _images.clear();
@@ -393,7 +323,6 @@ class _RequestFormPageState extends State<RequestFormPage> {
           _priority = 'ด่วน';
         });
 
-        // Navigate back to home page after 1.5 seconds to show the SnackBar
         await Future.delayed(const Duration(milliseconds: 1500));
         if (mounted) {
           Navigator.pop(context, true);

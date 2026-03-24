@@ -7,12 +7,13 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'remark.dart';
 import '../../Authen/authen.dart';
+import '../../Service/mt_request_api.dart';
 import 'closejob.dart';
 import 'document.dart';
 import 'usercheck.dart';
 import '../home.dart';
 
-// Data Model for detail page
+/// Data model shared between the list page and the detail page.
 class PurchaseItem {
   final String id;
   final String no;
@@ -45,45 +46,7 @@ class PurchaseItem {
   });
 }
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MT request Detail',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: const Color(0xFF1976D2),
-        scaffoldBackgroundColor: const Color(0xFFF5F7FA),
-        fontFamily: 'Sans-serif',
-        textTheme: TextTheme(
-          headlineSmall: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1A202C),
-          ),
-          labelLarge: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF2D3748),
-          ),
-          bodyMedium: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w400,
-            color: Color(0xFF4A5568),
-          ),
-        ),
-      ),
-      home: const PurchaseDetailPage(),
-    );
-  }
-}
-
+/// Detail page that coordinates files, approval state, comments, and actions.
 class PurchaseDetailPage extends StatefulWidget {
   final PurchaseItem? item;
 
@@ -94,7 +57,7 @@ class PurchaseDetailPage extends StatefulWidget {
 }
 
 class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
-  final String _baseHost = 'http://26.99.205.41:9000/drugs';
+  final String _baseHost = MtRequestApi.baseUrl;
   List<String> _fileUrls = [];
   bool _loadingFiles = false;
   String? _currentFetchId;
@@ -106,6 +69,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   bool _loadingApprovers = false;
   String? _currentRepairRequestId;
 
+  /// Load all secondary data sources required by the detail screen.
   @override
   void initState() {
     super.initState();
@@ -114,6 +78,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     _loadApproversForItem();
   }
 
+  /// Fetch approval steps for the current request.
   Future<void> _loadApproversForItem() async {
     String? id;
 
@@ -138,7 +103,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
   }
 
   Future<void> _fetchApproversForId(String id) async {
-    // Use the approval-steps endpoint per request
     final uri = Uri.parse('$_baseHost/repair-requests/$id/approval-steps');
     setState(() {
       _loadingApprovers = true;
@@ -196,6 +160,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
+  /// Send approve or reject state to whichever backend endpoint is available.
   Future<void> _sendApproverAction(
     int idx,
     String approverId,
@@ -207,7 +172,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
     final Map<String, dynamic> bodyMap = {'approved': approve};
     if (Authen.requesterId != null) bodyMap['user_id'] = Authen.requesterId;
-    // Primary endpoint requested by backend: POST /drugs/repair-requests/{id}/approve
     final primaryApproveUri = Uri.parse(
       '$_baseHost/repair-requests/$_currentRepairRequestId/approve',
     );
@@ -234,8 +198,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(approve ? 'อนุมัติสำเร็จ' : 'ไม่อนุมัติสำเร็จ')),
       );
-      // If this was an approval action, navigate back to the home list and
-      // replace this detail page so the home will reload once.
       if (approve) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (ctx) => const PurchaseReportPage()),
@@ -320,9 +282,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
+  /// Approve the current row after verifying the logged-in user is allowed.
   Future<void> _approveApproverAt(int idx) async {
     final approver = _approvers[idx];
-    // approver user id in the list (could be 'id' or 'user_id' depending on API)
     final approverUserIdRaw =
         (approver['id'] ??
         approver['user_id'] ??
@@ -344,14 +306,12 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       return;
     }
 
-    // If logged in user id does not match approver id for this row, deny permission
     if (approverUserId != loggedUserId.toString()) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('คุณไม่มีสิทอนุมัตินี้')));
       return;
     }
-    // Use approver-specific approvers/{approverId} endpoint (PATCH) to approve.
     final approverId =
         (approver['id'] ??
                 approver['approver_id'] ??
@@ -368,9 +328,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     await _sendApproverAction(idx, approverId, true);
   }
 
+  /// Reject the current row and require a remark before sending the request.
   Future<void> _rejectApproverAt(int idx) async {
     final approver = _approvers[idx];
-    // approver user id in the list (could be 'id' or 'user_id' depending on API)
     final approverUserIdRaw =
         (approver['id'] ??
         approver['user_id'] ??
@@ -392,14 +352,12 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       return;
     }
 
-    // If logged in user id does not match approver id for this row, deny permission
     if (approverUserId != loggedUserId.toString()) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('คุณไม่มีสิทอนุมัตินี้')));
       return;
     }
-    // Use approver-specific approvers/{approverId} endpoint (PATCH) to reject.
     final approverId =
         (approver['id'] ??
                 approver['approver_id'] ??
@@ -412,7 +370,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       ).showSnackBar(const SnackBar(content: Text('ไม่พบรหัสผู้อนุมัติ')));
       return;
     }
-    // Open remark dialog first and require a remark before rejecting
     final repairId = _currentRepairRequestId;
     if (repairId == null || repairId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -425,12 +382,10 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
     final result = await showRemarkDialog(context, repairRequestId: repairId);
     if (result == null) {
-      // user cancelled
       return;
     }
     final remark = (result['remark'] as String?) ?? '';
 
-    // Call the reject endpoint: PATCH /repair-requests/{id}/reject
     final uri = Uri.parse('$_baseHost/repair-requests/$repairId/reject');
     final headers = _authHeaders(json: true);
     final bodyMap = <String, dynamic>{};
@@ -468,8 +423,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
-  // Handle requester acceptance (user inspection passed) by calling
-  // POST /drugs/repair-requests/{id}/requester-accept
+  /// Mark the job as accepted by the requester after user-side inspection.
   Future<void> _handleRequesterAccept() async {
     String? id = _currentRepairRequestId ?? widget.item?.id;
     if (id == null || id.isEmpty) id = await _resolveIdFromList();
@@ -487,13 +441,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
 
     final bodyMap = <String, dynamic>{};
     if (Authen.requesterId != null) bodyMap['user_id'] = Authen.requesterId;
-    // include raw item data to help server process the submission
     if (widget.item?.rawData != null) {
       bodyMap['data'] = widget.item!.rawData;
     }
 
     try {
-      // Prefer PATCH as shown in the API screenshot. If PATCH not supported, fall back to POST.
       try {
         debugPrint('PATCH requester-accept URI: $uri');
         debugPrint('PATCH headers: $headers');
@@ -521,7 +473,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         debugPrint('PATCH requester-accept error: $e');
       }
 
-      // fallback to POST if PATCH failed
       try {
         debugPrint('POST requester-accept URI: $uri');
         final resp = await http
@@ -562,16 +513,15 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
+  /// Resolve request id first, then load related files.
   Future<void> _loadFilesForItem() async {
     String? id;
 
-    // Use the ID directly from the item passed during navigation
     if (widget.item != null && widget.item!.id.isNotEmpty) {
       id = widget.item!.id;
       debugPrint('Using item.id from navigation: $id');
     }
 
-    // Fallback to rawData if id is empty
     if (id == null || id.isEmpty) {
       final raw = widget.item?.rawData;
       if (raw != null) {
@@ -591,16 +541,15 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     await _fetchFilesForId(id);
   }
 
+  /// Resolve request id first, then load related comments.
   Future<void> _loadCommentsForItem() async {
     String? id;
 
-    // Use the ID directly from the item passed during navigation
     if (widget.item != null && widget.item!.id.isNotEmpty) {
       id = widget.item!.id;
       debugPrint('Using item.id from navigation (comments): $id');
     }
 
-    // Fallback to rawData if id is empty
     if (id == null || id.isEmpty) {
       final raw = widget.item?.rawData;
       if (raw != null) {
@@ -620,6 +569,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     await _fetchCommentsForId(id);
   }
 
+  /// Fallback id lookup when navigation data is incomplete.
   Future<String?> _resolveIdFromList() async {
     try {
       final uri = Uri.parse('$_baseHost/repair-requests');
@@ -647,26 +597,24 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         final entryId = entry['id']?.toString();
         if (entryId == null) continue;
 
-        // Match by no
         if (targetNo != null && targetNo != 'N/A') {
           final candidates = [entry['no'], entry['pr_no'], entry['job_no']];
           for (final c in candidates) {
             if (c != null && c.toString() == targetNo) return entryId;
           }
         }
-        // Match by topic
         if (targetTopic != null && targetTopic != 'N/A') {
           final t = entry['topic'] ?? entry['title'] ?? entry['description'];
           if (t != null && t.toString() == targetTopic) return entryId;
         }
       }
-      // Fallback: first item
       final first = list.first;
       if (first is Map && first['id'] != null) return first['id'].toString();
     } catch (e) {}
     return null;
   }
 
+  /// Download file metadata and normalize any returned path into full URLs.
   Future<void> _fetchFilesForId(String id) async {
     final uri = Uri.parse('$_baseHost/repair-requests/$id/files');
     setState(() {
@@ -686,7 +634,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         if (decoded is List) {
           list = decoded;
         } else if (decoded is Map) {
-          // Try common API response keys
           if (decoded['value'] is List) {
             list = decoded['value'];
           } else if (decoded['data'] is List) {
@@ -720,7 +667,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
                   break;
                 }
               }
-              // fallback: search recursively for any string that looks like an image path
               if (!foundUrl) {
                 final found = _findImageString(item);
                 if (found != null) {
@@ -738,6 +684,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     }
   }
 
+  /// Download comments and enrich them with normalized attachments for the UI.
   Future<void> _fetchCommentsForId(String id) async {
     final uri = Uri.parse('$_baseHost/repair-requests/$id/comments');
     setState(() {
@@ -754,7 +701,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         final decoded = jsonDecode(resp.body);
         List<dynamic> commentList = [];
 
-        // Handle different response formats
         if (decoded is List) {
           commentList = decoded;
         } else if (decoded is Map) {
@@ -767,7 +713,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           }
         }
 
-        // Normalize/collect attachments (images/files) for each comment so UI can display them.
         List<String> _collectImageStrings(dynamic node) {
           final exts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
           final out = <String>[];
@@ -802,7 +747,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           final c = commentList[i];
           final attachments = <String>[];
           if (c is Map) {
-            // Common keys containing attachments
             final keys = ['attachments', 'files', 'images', 'media'];
             for (final k in keys) {
               if (c[k] is List) {
@@ -839,13 +783,11 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               }
             }
 
-            // If not found via common keys, try to collect any image-like strings inside the comment object
             if (attachments.isEmpty) {
               final found = _collectImageStrings(c);
               attachments.addAll(found);
             }
 
-            // Normalize URLs/paths and remove empties/duplicates
             final normalized = <String>[];
             for (final a in attachments) {
               final s = a.toString();
@@ -854,7 +796,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
               if (!normalized.contains(url)) normalized.add(url);
             }
 
-            // attach to comment map for UI usage
             try {
               c['attachments'] = normalized;
             } catch (_) {}
@@ -880,7 +821,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     return '$_baseHost/$raw';
   }
 
-  // Build headers including Authorization token when available
+  /// Build request headers and attach the bearer token when available.
   Map<String, String> _authHeaders({bool json = false}) {
     final headers = <String, String>{};
     if (json) headers['Content-Type'] = 'application/json';
@@ -890,7 +831,7 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     return headers;
   }
 
-  // Recursively search a Map/List for a string that looks like an image/file path
+  /// Recursively search nested payloads for the first image-like string value.
   String? _findImageString(dynamic node) {
     if (node == null) return null;
     final exts = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
@@ -899,7 +840,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       for (final e in exts) {
         if (low.contains(e)) return node;
       }
-      // also consider full URLs without extension (rare)
       if (low.startsWith('http')) return node;
       return null;
     }
@@ -920,10 +860,9 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
     return null;
   }
 
-  // Robustly extract a username string from an approver object
+  /// Extract the best display name available for an approver row.
   String _extractUsername(dynamic approver) {
     if (approver == null) return 'ไม่มีข้อมูล';
-    // direct keys
     final candidates = [
       'username',
       'user_name',
@@ -945,7 +884,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           }
         }
       }
-      // check nested common containers
       for (final nk in ['user', 'approver', 'account', 'person']) {
         if (approver[nk] is Map) {
           final m = approver[nk] as Map;
@@ -953,7 +891,6 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           if (m['name'] != null) return m['name'].toString();
         }
       }
-      // last resort: try first string value
       for (final v in approver.values) {
         if (v is String && v.isNotEmpty) return v;
       }

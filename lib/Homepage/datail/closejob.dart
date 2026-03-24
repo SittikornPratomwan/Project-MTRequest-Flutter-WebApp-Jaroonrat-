@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../Authen/authen.dart';
+import '../../Service/mt_request_api.dart';
 
+/// Technician action button used to mark a job as completed.
 class CloseJobButton extends StatefulWidget {
-  // Accept a dynamic item (from detail page) to avoid circular imports
   final dynamic item;
   const CloseJobButton({super.key, required this.item});
 
@@ -13,9 +14,10 @@ class CloseJobButton extends StatefulWidget {
 }
 
 class _CloseJobButtonState extends State<CloseJobButton> {
-  final String _baseHost = 'http://26.99.205.41:9000/drugs';
+  final String _baseHost = MtRequestApi.baseUrl;
   bool _loading = false;
 
+  /// Build request headers while reusing the current bearer token.
   Map<String, String> _authHeaders({bool json = false}) {
     final headers = <String, String>{};
     if (json) headers['Content-Type'] = 'application/json';
@@ -25,12 +27,13 @@ class _CloseJobButtonState extends State<CloseJobButton> {
     return headers;
   }
 
+  /// Resolve an id from the list endpoint when the detail payload is incomplete.
   Future<String?> _resolveIdFromList() async {
     try {
       final uri = Uri.parse('$_baseHost/repair-requests');
       final resp = await http
           .get(uri, headers: _authHeaders())
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
       if (resp.statusCode != 200) return null;
       final decoded = jsonDecode(resp.body);
       List<dynamic>? list;
@@ -66,6 +69,7 @@ class _CloseJobButtonState extends State<CloseJobButton> {
     return null;
   }
 
+  /// Close the job using the first backend endpoint that accepts the request.
   Future<void> _closeRequest(String? id) async {
     if (id == null || id.isEmpty) {
       if (mounted) {
@@ -77,7 +81,6 @@ class _CloseJobButtonState extends State<CloseJobButton> {
     }
 
     setState(() => _loading = true);
-    // Prefer technician-finish endpoint used by technicians
     final uriTechFinish = Uri.parse(
       '$_baseHost/repair-requests/$id/technician-finish',
     );
@@ -87,11 +90,10 @@ class _CloseJobButtonState extends State<CloseJobButton> {
     final body = jsonEncode({'closed': true});
 
     try {
-      // 0) Try technician-finish (PATCH)
       try {
         final respTech = await http
             .patch(uriTechFinish, headers: headers, body: body)
-            .timeout(const Duration(seconds: 10));
+            .timeout(MtRequestApi.requestTimeout);
         debugPrint(
           'PATCH technician-finish -> ${respTech.statusCode} ${respTech.body}',
         );
@@ -109,11 +111,10 @@ class _CloseJobButtonState extends State<CloseJobButton> {
       } catch (e) {
         debugPrint('Technician-finish PATCH error: $e');
       }
-      // Try PATCH
       try {
         final resp = await http
             .patch(uriPrimary, headers: headers, body: body)
-            .timeout(const Duration(seconds: 10));
+            .timeout(MtRequestApi.requestTimeout);
         debugPrint('PATCH close -> ${resp.statusCode} ${resp.body}');
         if (resp.statusCode == 200 ||
             resp.statusCode == 201 ||
@@ -130,11 +131,10 @@ class _CloseJobButtonState extends State<CloseJobButton> {
         debugPrint('Primary PATCH close error: $e');
       }
 
-      // Try POST to same endpoint
       try {
         final r2 = await http
             .post(uriPrimary, headers: headers, body: body)
-            .timeout(const Duration(seconds: 10));
+            .timeout(MtRequestApi.requestTimeout);
         debugPrint('POST close -> ${r2.statusCode} ${r2.body}');
         if (r2.statusCode == 200 ||
             r2.statusCode == 201 ||
@@ -151,11 +151,10 @@ class _CloseJobButtonState extends State<CloseJobButton> {
         debugPrint('POST close error: $e');
       }
 
-      // Try alternate complete endpoint
       try {
         final r3 = await http
             .post(uriAlt, headers: headers, body: body)
-            .timeout(const Duration(seconds: 10));
+            .timeout(MtRequestApi.requestTimeout);
         debugPrint('POST complete -> ${r3.statusCode} ${r3.body}');
         if (r3.statusCode == 200 ||
             r3.statusCode == 201 ||
@@ -198,10 +197,6 @@ class _CloseJobButtonState extends State<CloseJobButton> {
     final alreadyClosed =
         lowerStatus.contains('จบ') || lowerStatus.contains('เสร็จ');
     if (alreadyClosed) return const SizedBox();
-
-    // Show Close/Send button by default (unless already closed).
-    // Previously this was gated by API-provided step/characteristic/department;
-    // to force the button visible for testing/usage we no longer return early here.
 
     return Center(
       child: ElevatedButton(

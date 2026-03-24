@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../Homepage/home.dart';
+import '../Service/mt_request_api.dart';
 import '../Service/theme_provider.dart';
 
+/// Login page responsible for authenticating the user and caching session data.
 class Authen extends StatefulWidget {
   const Authen({super.key});
 
@@ -28,13 +30,10 @@ class Authen extends StatefulWidget {
 class _AuthenState extends State<Authen> {
   late double screenWidth, screenHeight;
   bool redEye = true;
-  // location fields removed
   bool isLoading = false;
 
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
-
-  // locationIdMap removed
 
   @override
   void initState() {
@@ -50,6 +49,7 @@ class _AuthenState extends State<Authen> {
     super.dispose();
   }
 
+  /// Rebuild the page when the shared theme toggles.
   void _onThemeChanged() {
     if (mounted) {
       setState(() {});
@@ -159,6 +159,7 @@ class _AuthenState extends State<Authen> {
     );
   }
 
+  /// Styled text field used by both username and password inputs.
   Widget buildTextField({
     required TextEditingController controller,
     required String labelText,
@@ -210,6 +211,7 @@ class _AuthenState extends State<Authen> {
     );
   }
 
+  /// Password input with show/hide toggle to keep the login flow compact.
   Widget buildPasswordField({required bool isDark}) {
     return Container(
       width: screenWidth * 0.8,
@@ -268,8 +270,7 @@ class _AuthenState extends State<Authen> {
     );
   }
 
-  // buildLocationRadio removed
-
+  /// Login button that reflects the current submitting state.
   Widget buildLoginButton({required bool isDark}) {
     return Container(
       width: screenWidth * 0.6,
@@ -309,6 +310,7 @@ class _AuthenState extends State<Authen> {
     );
   }
 
+  /// Validate credentials, call the login API, and cache the returned session.
   Future<void> handleLogin() async {
     final username = usernameController.text.trim();
     final password = passwordController.text.trim();
@@ -321,20 +323,17 @@ class _AuthenState extends State<Authen> {
       showSnackbar('กรุณากรอก รหัสผ่าน', backgroundColor: Colors.red);
       return;
     }
-    // location check removed
-
     setState(() {
       isLoading = true;
     });
 
-    final baseUrl = 'http://26.99.205.41:9000/drugs';
-    final url = Uri.parse('$baseUrl/mtrequest/login');
+    final url = MtRequestApi.uri('/mtrequest/login');
     final body = jsonEncode({'username': username, 'password': password});
 
     try {
       final response = await http
           .post(url, headers: {'Content-Type': 'application/json'}, body: body)
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
 
       // Debug: log status and body
       debugPrint('Login response status: ${response.statusCode}');

@@ -9,7 +9,9 @@ import 'package:http_parser/http_parser.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../Authen/authen.dart';
+import '../../Service/mt_request_api.dart';
 
+/// Standalone remark page kept for compatibility with older navigation flows.
 class RemarkPage extends StatefulWidget {
   const RemarkPage({super.key});
 
@@ -17,7 +19,7 @@ class RemarkPage extends StatefulWidget {
   State<RemarkPage> createState() => _RemarkPageState();
 }
 
-// Helper to show the remark UI as a popup dialog without darkening the background.
+/// Show the remark dialog used by reject flows and comment submission.
 Future<Map<String, dynamic>?> showRemarkDialog(
   BuildContext context, {
   String? repairRequestId,
@@ -31,8 +33,7 @@ Future<Map<String, dynamic>?> showRemarkDialog(
     if (comment.isEmpty || repairRequestId == null) return;
 
     try {
-      // If there are images selected, upload them first and collect attachment paths.
-      final baseHost = 'http://26.99.205.41:9000/drugs';
+      final baseHost = MtRequestApi.baseUrl;
       final List<String> attachments = [];
       if (images.isNotEmpty) {
         final uriUpload = Uri.parse(
@@ -56,12 +57,11 @@ Future<Map<String, dynamic>?> showRemarkDialog(
           );
         }
 
-        final streamed = await req.send().timeout(const Duration(seconds: 20));
+        final streamed = await req.send().timeout(MtRequestApi.uploadTimeout);
         final respStr = await streamed.stream.bytesToString();
         if (streamed.statusCode == 200 || streamed.statusCode == 201) {
           try {
             final decoded = jsonDecode(respStr);
-            // decoded may be List or Map; try common keys
             if (decoded is List) {
               for (final e in decoded) {
                 if (e is String)
@@ -87,7 +87,6 @@ Future<Map<String, dynamic>?> showRemarkDialog(
                   if (e is String) attachments.add(e);
                 }
               } else if (decoded['data'] is Map) {
-                // try nested
                 final d = decoded['data'];
                 if (d['files'] is List) {
                   for (final e in d['files']) {
@@ -101,11 +100,8 @@ Future<Map<String, dynamic>?> showRemarkDialog(
                 }
               }
             }
-          } catch (_) {
-            // ignore JSON parse errors; fallback to generated names
-          }
+          } catch (_) {}
 
-          // If server didn't return paths, fallback to guessed upload paths
           if (attachments.isEmpty) {
             for (var i = 0; i < images.length; i++) {
               attachments.add(
@@ -119,7 +115,6 @@ Future<Map<String, dynamic>?> showRemarkDialog(
         }
       }
 
-      // Now post the comment with attachments array
       final uri = Uri.parse(
         '$baseHost/repair-requests/$repairRequestId/comments',
       );
@@ -136,7 +131,7 @@ Future<Map<String, dynamic>?> showRemarkDialog(
 
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
 
       if (kDebugMode) {
         debugPrint('Submit comment response: ${response.statusCode}');
@@ -369,9 +364,9 @@ class _RemarkPageState extends State<RemarkPage> {
     super.dispose();
   }
 
+  /// Read selected images into memory so the dialog can preview them on web.
   Future<void> _pickImages() async {
     try {
-      // Try multi image (works on many platforms)
       final List<XFile> picked = await _picker.pickMultiImage();
       if (picked.isNotEmpty) {
         for (final x in picked) {
@@ -383,7 +378,6 @@ class _RemarkPageState extends State<RemarkPage> {
         return;
       }
 
-      // Fallback: single image picker
       final XFile? single = await _picker.pickImage(
         source: ImageSource.gallery,
       );

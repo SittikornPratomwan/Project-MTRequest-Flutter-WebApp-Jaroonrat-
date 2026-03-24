@@ -6,7 +6,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'detail.dart';
 import '../../Authen/authen.dart';
+import '../../Service/mt_request_api.dart';
 
+/// Printable document view for a single repair request.
 class DocumentPage extends StatefulWidget {
   final PurchaseItem item;
   const DocumentPage({super.key, required this.item});
@@ -16,7 +18,7 @@ class DocumentPage extends StatefulWidget {
 }
 
 class _DocumentPageState extends State<DocumentPage> {
-  final String _baseHost = 'http://26.99.205.41:9000/drugs';
+  final String _baseHost = MtRequestApi.baseUrl;
   static const int _maxApproverColumnsPerPdfTable = 3;
 
   List<String> _fileUrls = [];
@@ -32,6 +34,7 @@ class _DocumentPageState extends State<DocumentPage> {
     _fetchApprovers();
   }
 
+  /// Reuse the bearer token header for the file and approver endpoints.
   Map<String, String> _authHeaders() {
     final h = <String, String>{};
     if (Authen.token != null && Authen.token!.isNotEmpty) {
@@ -40,6 +43,7 @@ class _DocumentPageState extends State<DocumentPage> {
     return h;
   }
 
+  /// Load attachments for the selected request so they can be shown or printed.
   Future<void> _fetchFiles() async {
     final id = widget.item.id;
     if (id.isEmpty) return;
@@ -50,7 +54,7 @@ class _DocumentPageState extends State<DocumentPage> {
             Uri.parse('$_baseHost/repair-requests/$id/files'),
             headers: _authHeaders(),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body);
         List<dynamic>? list;
@@ -82,6 +86,7 @@ class _DocumentPageState extends State<DocumentPage> {
     }
   }
 
+  /// Load approval steps for the printable approval section.
   Future<void> _fetchApprovers() async {
     final id = widget.item.id;
     if (id.isEmpty) return;
@@ -92,7 +97,7 @@ class _DocumentPageState extends State<DocumentPage> {
             Uri.parse('$_baseHost/repair-requests/$id/approval-steps'),
             headers: _authHeaders(),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(MtRequestApi.requestTimeout);
       if (resp.statusCode == 200) {
         final decoded = jsonDecode(resp.body);
         List<dynamic> list = [];
@@ -124,6 +129,7 @@ class _DocumentPageState extends State<DocumentPage> {
     }
   }
 
+  /// Convert relative paths from the backend into absolute URLs.
   String _normalizeUrl(String raw) {
     if (raw.startsWith('http')) return raw;
     if (raw.startsWith('/')) return '$_baseHost$raw';
@@ -185,6 +191,7 @@ class _DocumentPageState extends State<DocumentPage> {
     return chunks;
   }
 
+  /// Build the PDF table in chunks so many approvers still fit the page.
   pw.Widget _buildPdfApprovalTable(List<dynamic> approvers) {
     final chunks = _chunkApprovers(
       approvers,
@@ -304,6 +311,7 @@ class _DocumentPageState extends State<DocumentPage> {
     );
   }
 
+  /// Generate and open the PDF preview for the current request.
   Future<void> _printDocument() async {
     final pdf = pw.Document();
     final item = widget.item;
