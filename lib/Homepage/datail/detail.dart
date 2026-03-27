@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:typed_data';
+import 'pr.dart';
 import 'remark.dart';
 import '../../Authen/authen.dart';
 import '../../Service/mt_request_api.dart';
@@ -1272,32 +1273,68 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
         elevation: 2,
         shadowColor: Colors.black.withOpacity(0.1),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // Show remark dialog without dimming background
-          final result = await showRemarkDialog(
-            context,
-            repairRequestId: displayItem.id,
-          );
-          if (result != null && mounted) {
-            final remark = result['remark'] as String? ?? '';
-            final images = result['images'] as List<Uint8List>? ?? [];
-            if (remark.isNotEmpty || images.isNotEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Remark saved'),
-                  backgroundColor: Colors.green,
-                ),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'pr_fab',
+            onPressed: () async {
+              final initialPrValue =
+                  (raw['pr_no'] ?? raw['prNo'] ?? displayItem.no).toString();
+              final result = await showPrDialog(
+                context,
+                initialValue: initialPrValue == 'N/A' ? '' : initialPrValue,
               );
-              // Refresh comments
-              await _loadCommentsForItem();
-            }
-          }
-        },
-        backgroundColor: const Color(0xFF48BB78),
-        foregroundColor: Colors.white,
-        tooltip: 'Add Remark',
-        child: const Icon(Icons.note_add, color: Colors.white),
+              if (result != null && mounted) {
+                final prValue = result['pr'] as String? ?? '';
+                if (prValue.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('PR saved: $prValue'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            backgroundColor: const Color(0xFFED8936),
+            foregroundColor: Colors.white,
+            tooltip: 'Add PR',
+            child: const Text(
+              'PR',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 12),
+          FloatingActionButton(
+            heroTag: 'remark_fab',
+            onPressed: () async {
+              // Show remark dialog without dimming background
+              final result = await showRemarkDialog(
+                context,
+                repairRequestId: displayItem.id,
+              );
+              if (result != null && mounted) {
+                final remark = result['remark'] as String? ?? '';
+                final images = result['images'] as List<Uint8List>? ?? [];
+                if (remark.isNotEmpty || images.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Remark saved'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  // Refresh comments
+                  await _loadCommentsForItem();
+                }
+              }
+            },
+            backgroundColor: const Color(0xFF48BB78),
+            foregroundColor: Colors.white,
+            tooltip: 'Add Remark',
+            child: const Icon(Icons.note_add, color: Colors.white),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
