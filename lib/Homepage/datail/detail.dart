@@ -1276,42 +1276,44 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
       floatingActionButton: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FloatingActionButton(
-            heroTag: 'pr_fab',
-            onPressed: () async {
-              String? repairRequestId = _currentRepairRequestId;
-              if (repairRequestId == null || repairRequestId.isEmpty) {
-                repairRequestId = displayItem.id;
-              }
-              if ((repairRequestId == null || repairRequestId.isEmpty) &&
-                  displayItem.rawData != null) {
-                repairRequestId =
-                    displayItem.rawData!['id']?.toString() ??
-                    displayItem.rawData!['repair_request_id']?.toString();
-              }
+          if (isDeptMT) ...[
+            FloatingActionButton(
+              heroTag: 'pr_fab',
+              onPressed: () async {
+                String? repairRequestId = _currentRepairRequestId;
+                if (repairRequestId == null || repairRequestId.isEmpty) {
+                  repairRequestId = displayItem.id;
+                }
+                if ((repairRequestId == null || repairRequestId.isEmpty) &&
+                    displayItem.rawData != null) {
+                  repairRequestId =
+                      displayItem.rawData!['id']?.toString() ??
+                      displayItem.rawData!['repair_request_id']?.toString();
+                }
 
-              final initialPrValue =
-                  (raw['pr_no'] ?? raw['prNumber'] ?? raw['prNo'] ?? '')
-                      .toString();
-              final initialPrText = (raw['pr_text'] ?? raw['prText'] ?? '')
-                  .toString();
+                final initialPrValue =
+                    (raw['pr_no'] ?? raw['prNumber'] ?? raw['prNo'] ?? '')
+                        .toString();
+                final initialPrText = (raw['pr_text'] ?? raw['prText'] ?? '')
+                    .toString();
 
-              await showPrDialog(
-                context,
-                repairRequestId: repairRequestId,
-                initialValue: initialPrValue == 'N/A' ? '' : initialPrValue,
-                initialText: initialPrText == 'N/A' ? '' : initialPrText,
-              );
-            },
-            backgroundColor: const Color(0xFFED8936),
-            foregroundColor: Colors.white,
-            tooltip: 'Add PR',
-            child: const Text(
-              'PR',
-              style: TextStyle(fontWeight: FontWeight.bold),
+                await showPrDialog(
+                  context,
+                  repairRequestId: repairRequestId,
+                  initialValue: initialPrValue == 'N/A' ? '' : initialPrValue,
+                  initialText: initialPrText == 'N/A' ? '' : initialPrText,
+                );
+              },
+              backgroundColor: const Color(0xFFED8936),
+              foregroundColor: Colors.white,
+              tooltip: 'Add PR',
+              child: const Text(
+                'PR',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
+          ],
           FloatingActionButton(
             heroTag: 'remark_fab',
             onPressed: () async {
