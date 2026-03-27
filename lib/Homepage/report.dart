@@ -16,6 +16,17 @@ class ReportPage extends StatefulWidget {
 
 class _ReportPageState extends State<ReportPage> {
   static const String _baseUrl = MtRequestApi.baseUrl;
+  static const List<_DepartmentOption> _departmentOptions = [
+    _DepartmentOption(id: 1, label: 'MT'),
+    _DepartmentOption(id: 2, label: 'HR'),
+    _DepartmentOption(id: 3, label: 'L5'),
+    _DepartmentOption(id: 4, label: 'DL'),
+    _DepartmentOption(id: 9, label: 'IMD'),
+    _DepartmentOption(id: 12, label: 'L4'),
+    _DepartmentOption(id: 14, label: 'ACC'),
+    _DepartmentOption(id: 15, label: 'QA'),
+    _DepartmentOption(id: 16, label: 'QC'),
+  ];
 
   final List<int> _years = List<int>.generate(7, (index) => 2024 + index);
   final List<_MonthOption> _months = const [
@@ -38,28 +49,49 @@ class _ReportPageState extends State<ReportPage> {
   late int _selectedMonthDeptCategory;
   late int _selectedYearCategory;
   late int _selectedMonthCategory;
+  late int _selectedDepartmentId;
+  late int _selectedYearDepartmentSummary;
+  late int _selectedYearDepartmentMonthlySummary;
+  late int _selectedMonthDepartmentMonthlySummary;
+  late int _selectedYearDepartmentDetails;
+  late int _selectedMonthDepartmentDetails;
 
   bool _isLoadingSummary = false;
   bool _isLoadingDeptCategory = false;
   bool _isLoadingCategory = false;
+  bool _isLoadingDepartmentSummary = false;
+  bool _isLoadingDepartmentMonthlySummary = false;
+  bool _isLoadingDepartmentDetails = false;
 
   String? _summaryError;
   String? _deptCategoryError;
   String? _categoryError;
+  String? _departmentSummaryError;
+  String? _departmentMonthlySummaryError;
+  String? _departmentDetailsError;
 
   List<_MonthlySummaryItem> _monthlySummaryItems = const [];
   List<_DeptCategoryItem> _deptCategoryItems = const [];
   List<_CategorySummaryItem> _categorySummaryItems = const [];
+  List<_DepartmentSummaryItem> _departmentSummaryItems = const [];
+  List<_DepartmentSummaryItem> _departmentMonthlySummaryItems = const [];
+  List<_DepartmentJobDetailItem> _departmentJobDetailItems = const [];
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
+    _selectedDepartmentId = _resolveInitialDepartmentId();
     _selectedYearSummary = now.year;
     _selectedYearDeptCategory = now.year;
     _selectedMonthDeptCategory = now.month;
     _selectedYearCategory = now.year;
     _selectedMonthCategory = now.month;
+    _selectedYearDepartmentSummary = now.year;
+    _selectedYearDepartmentMonthlySummary = now.year;
+    _selectedMonthDepartmentMonthlySummary = now.month;
+    _selectedYearDepartmentDetails = now.year;
+    _selectedMonthDepartmentDetails = now.month;
     _fetchAllReports();
   }
 
@@ -68,7 +100,40 @@ class _ReportPageState extends State<ReportPage> {
       _fetchYearSummary(),
       _fetchDeptCategoryReport(),
       _fetchCategoryReport(),
+      _fetchDepartmentSummaryReport(),
+      _fetchDepartmentMonthlySummaryReport(),
+      _fetchDepartmentJobsReport(),
     ]);
+  }
+
+  int _resolveInitialDepartmentId() {
+    final authDepartmentId = Authen.dpId;
+    if (authDepartmentId != null &&
+        _departmentOptions.any((option) => option.id == authDepartmentId)) {
+      return authDepartmentId;
+    }
+
+    final rawDepartment = (Authen.departmentName ?? Authen.division ?? '')
+        .trim()
+        .toUpperCase();
+    if (rawDepartment.isNotEmpty) {
+      for (final option in _departmentOptions) {
+        if (option.label.toUpperCase() == rawDepartment) {
+          return option.id;
+        }
+      }
+    }
+
+    return _departmentOptions.first.id;
+  }
+
+  String _departmentLabelFromId(int departmentId) {
+    for (final option in _departmentOptions) {
+      if (option.id == departmentId) {
+        return option.label;
+      }
+    }
+    return 'แผนก $departmentId';
   }
 
   /// Build headers for report endpoints while keeping authorization optional.
@@ -251,6 +316,151 @@ class _ReportPageState extends State<ReportPage> {
       return _monthLabelFromValue(parsed);
     }
     return text;
+  }
+
+  String _normalizeDateTimeLabel(dynamic rawValue) {
+    final text = rawValue?.toString().trim() ?? '';
+    if (text.isEmpty) {
+      return '-';
+    }
+
+    final parsed = DateTime.tryParse(text);
+    if (parsed == null) {
+      return text;
+    }
+
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+
+    return '${twoDigits(parsed.day)}/${twoDigits(parsed.month)}/${parsed.year} '
+        '${twoDigits(parsed.hour)}:${twoDigits(parsed.minute)}';
+  }
+
+  String _resolveDepartmentSummaryLabel(Map<String, dynamic> item) {
+    final monthValue = _findFirstInt(item, [
+      'month',
+      'month_no',
+      'monthNumber',
+      'month_number',
+    ]);
+    if (monthValue > 0) {
+      return _monthLabelFromValue(monthValue);
+    }
+
+    final label = _findFirstString(item, [
+      'month_name',
+      'monthName',
+      'month',
+      'category_name',
+      'categoryName',
+      'category',
+      'repair_category',
+      'type_name',
+      'type',
+      'status_label',
+      'statusLabel',
+      'status',
+      'label',
+      'name',
+      'key',
+      'job_no',
+      'no',
+    ]);
+
+    if (label.isEmpty) {
+      return '-';
+    }
+
+    return _normalizeMonthLabel(label);
+  }
+
+  List<_DepartmentSummaryItem> _parseDepartmentSummaryItems(dynamic data) {
+    final rows = _extractItemList(data)
+        .map((item) {
+          final label = _resolveDepartmentSummaryLabel(item);
+          final count = _findFirstInt(item, [
+            'count',
+            'total',
+            'total_requests',
+            'request_count',
+            'job_count',
+            'value',
+          ]);
+
+          return _DepartmentSummaryItem(label: label, count: count);
+        })
+        .where((item) => item.label.trim().isNotEmpty && item.label != '-')
+        .toList();
+
+    rows.sort((left, right) => right.count.compareTo(left.count));
+    return rows;
+  }
+
+  List<_DepartmentJobDetailItem> _parseDepartmentJobDetailItems(dynamic data) {
+    final rows = _extractItemList(data)
+        .map((item) {
+          final jobNo = _findFirstString(item, [
+            'job_no',
+            'jobNo',
+            'request_no',
+            'requestNo',
+            'repair_no',
+            'repairNo',
+            'pr_no',
+            'prNo',
+            'no',
+            'id',
+          ]);
+          final topic = _findFirstString(item, [
+            'title',
+            'topic',
+            'description',
+            'detail',
+            'problem',
+            'subject',
+          ]);
+          final category = _findFirstString(item, [
+            'category_name',
+            'categoryName',
+            'category',
+            'repair_category',
+            'type_name',
+            'type',
+          ]);
+          final status = _findFirstString(item, [
+            'status_label',
+            'statusLabel',
+            'status',
+            'current_status',
+            'currentStatus',
+            'phase',
+          ]);
+          final createdAt = _findFirstString(item, [
+            'created_at',
+            'createdAt',
+            'request_date',
+            'requestDate',
+            'date',
+          ]);
+
+          return _DepartmentJobDetailItem(
+            jobNo: jobNo,
+            topic: topic,
+            category: category,
+            status: status,
+            createdAt: createdAt,
+          );
+        })
+        .where(
+          (item) =>
+              item.jobNo.isNotEmpty ||
+              item.topic.isNotEmpty ||
+              item.category.isNotEmpty ||
+              item.status.isNotEmpty,
+        )
+        .toList();
+
+    rows.sort((left, right) => right.createdAt.compareTo(left.createdAt));
+    return rows;
   }
 
   Future<void> _fetchYearSummary() async {
@@ -494,6 +704,135 @@ class _ReportPageState extends State<ReportPage> {
     }
   }
 
+  Future<void> _fetchDepartmentSummaryReport() async {
+    setState(() {
+      _isLoadingDepartmentSummary = true;
+      _departmentSummaryError = null;
+    });
+
+    try {
+      final data = await _getReportData(
+        '/repair-requests/reports/department-job-summary',
+        {
+          'dp_id': _selectedDepartmentId.toString(),
+          'year': _selectedYearDepartmentSummary.toString(),
+        },
+      );
+
+      final rows = _parseDepartmentSummaryItems(data);
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _departmentSummaryItems = rows;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _departmentSummaryError = error.toString().replaceFirst(
+          'Exception: ',
+          '',
+        );
+        _departmentSummaryItems = const [];
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDepartmentSummary = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchDepartmentMonthlySummaryReport() async {
+    setState(() {
+      _isLoadingDepartmentMonthlySummary = true;
+      _departmentMonthlySummaryError = null;
+    });
+
+    try {
+      final data = await _getReportData(
+        '/repair-requests/reports/department-job-summary',
+        {
+          'dp_id': _selectedDepartmentId.toString(),
+          'year': _selectedYearDepartmentMonthlySummary.toString(),
+          'month': _selectedMonthDepartmentMonthlySummary.toString(),
+        },
+      );
+
+      final rows = _parseDepartmentSummaryItems(data);
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _departmentMonthlySummaryItems = rows;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _departmentMonthlySummaryError = error.toString().replaceFirst(
+          'Exception: ',
+          '',
+        );
+        _departmentMonthlySummaryItems = const [];
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDepartmentMonthlySummary = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchDepartmentJobsReport() async {
+    setState(() {
+      _isLoadingDepartmentDetails = true;
+      _departmentDetailsError = null;
+    });
+
+    try {
+      final data =
+          await _getReportData('/repair-requests/reports/department-jobs', {
+            'dp_id': _selectedDepartmentId.toString(),
+            'year': _selectedYearDepartmentDetails.toString(),
+            'month': _selectedMonthDepartmentDetails.toString(),
+          });
+
+      final rows = _parseDepartmentJobDetailItems(data);
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _departmentJobDetailItems = rows;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _departmentDetailsError = error.toString().replaceFirst(
+          'Exception: ',
+          '',
+        );
+        _departmentJobDetailItems = const [];
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDepartmentDetails = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -526,6 +865,12 @@ class _ReportPageState extends State<ReportPage> {
             _buildDeptCategorySection(),
             const SizedBox(height: 16),
             _buildCategorySection(),
+            const SizedBox(height: 16),
+            _buildDepartmentSummarySection(),
+            const SizedBox(height: 16),
+            _buildDepartmentMonthlySummarySection(),
+            const SizedBox(height: 16),
+            _buildDepartmentJobDetailsSection(),
           ],
         ),
       ),
@@ -828,6 +1173,372 @@ class _ReportPageState extends State<ReportPage> {
     );
   }
 
+  Widget _buildDepartmentSelector({
+    required int selectedValue,
+    required ValueChanged<int?> onChanged,
+  }) {
+    return SizedBox(
+      width: 180,
+      child: DropdownButtonFormField<int>(
+        value: selectedValue,
+        decoration: const InputDecoration(
+          labelText: 'เลือกแผนก',
+          border: OutlineInputBorder(),
+        ),
+        items: _departmentOptions
+            .map(
+              (department) => DropdownMenuItem<int>(
+                value: department.id,
+                child: Text(department.label),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  Widget _buildDepartmentSummarySection() {
+    final total = _departmentSummaryItems.fold<int>(
+      0,
+      (sum, item) => sum + item.count,
+    );
+
+    return _ReportSectionCard(
+      title: '4. เลือกแผนก รายปี',
+      subtitle:
+          'ดึงข้อมูลจาก department-job-summary ตามแผนก ${_departmentLabelFromId(_selectedDepartmentId)}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _buildDepartmentSelector(
+                selectedValue: _selectedDepartmentId,
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() {
+                    _selectedDepartmentId = value;
+                  });
+                  _fetchDepartmentSummaryReport();
+                  _fetchDepartmentMonthlySummaryReport();
+                  _fetchDepartmentJobsReport();
+                },
+              ),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<int>(
+                  value: _selectedYearDepartmentSummary,
+                  decoration: const InputDecoration(
+                    labelText: 'เลือกปี',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _years
+                      .map(
+                        (year) => DropdownMenuItem<int>(
+                          value: year,
+                          child: Text(year.toString()),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedYearDepartmentSummary = value;
+                    });
+                    _fetchDepartmentSummaryReport();
+                  },
+                ),
+              ),
+              _buildCountChip('รวมรายการ', total),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildLoadingErrorOrContent(
+            isLoading: _isLoadingDepartmentSummary,
+            error: _departmentSummaryError,
+            isEmpty: _departmentSummaryItems.isEmpty,
+            emptyMessage: 'ไม่พบข้อมูลรายปีของแผนกที่เลือก',
+            onRetry: _fetchDepartmentSummaryReport,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('รายการ')),
+                  DataColumn(label: Text('จำนวน')),
+                ],
+                rows: _departmentSummaryItems
+                    .map(
+                      (item) => DataRow(
+                        cells: [
+                          DataCell(Text(item.label)),
+                          DataCell(Text(item.count.toString())),
+                        ],
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDepartmentMonthlySummarySection() {
+    final total = _departmentMonthlySummaryItems.fold<int>(
+      0,
+      (sum, item) => sum + item.count,
+    );
+
+    return _ReportSectionCard(
+      title: '5. เลือกแผนก รายเดือน',
+      subtitle: 'ดึงข้อมูลจาก department-job-summary พร้อมตัวกรองเดือน',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _buildDepartmentSelector(
+                selectedValue: _selectedDepartmentId,
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() {
+                    _selectedDepartmentId = value;
+                  });
+                  _fetchDepartmentSummaryReport();
+                  _fetchDepartmentMonthlySummaryReport();
+                  _fetchDepartmentJobsReport();
+                },
+              ),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<int>(
+                  value: _selectedYearDepartmentMonthlySummary,
+                  decoration: const InputDecoration(
+                    labelText: 'เลือกปี',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _years
+                      .map(
+                        (year) => DropdownMenuItem<int>(
+                          value: year,
+                          child: Text(year.toString()),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedYearDepartmentMonthlySummary = value;
+                    });
+                    _fetchDepartmentMonthlySummaryReport();
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<int>(
+                  value: _selectedMonthDepartmentMonthlySummary,
+                  decoration: const InputDecoration(
+                    labelText: 'เลือกเดือน',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _months
+                      .map(
+                        (month) => DropdownMenuItem<int>(
+                          value: month.value,
+                          child: Text(month.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedMonthDepartmentMonthlySummary = value;
+                    });
+                    _fetchDepartmentMonthlySummaryReport();
+                  },
+                ),
+              ),
+              _buildCountChip('รวมรายการ', total),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildLoadingErrorOrContent(
+            isLoading: _isLoadingDepartmentMonthlySummary,
+            error: _departmentMonthlySummaryError,
+            isEmpty: _departmentMonthlySummaryItems.isEmpty,
+            emptyMessage: 'ไม่พบข้อมูลรายเดือนของแผนกที่เลือก',
+            onRetry: _fetchDepartmentMonthlySummaryReport,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('รายการ')),
+                  DataColumn(label: Text('จำนวน')),
+                ],
+                rows: _departmentMonthlySummaryItems
+                    .map(
+                      (item) => DataRow(
+                        cells: [
+                          DataCell(Text(item.label)),
+                          DataCell(Text(item.count.toString())),
+                        ],
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDepartmentJobDetailsSection() {
+    return _ReportSectionCard(
+      title: '6. เลือกแผนก มีรายละเอียด',
+      subtitle: 'ดึงข้อมูลจาก department-jobs แบบรายการงาน',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _buildDepartmentSelector(
+                selectedValue: _selectedDepartmentId,
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() {
+                    _selectedDepartmentId = value;
+                  });
+                  _fetchDepartmentSummaryReport();
+                  _fetchDepartmentMonthlySummaryReport();
+                  _fetchDepartmentJobsReport();
+                },
+              ),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<int>(
+                  value: _selectedYearDepartmentDetails,
+                  decoration: const InputDecoration(
+                    labelText: 'เลือกปี',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _years
+                      .map(
+                        (year) => DropdownMenuItem<int>(
+                          value: year,
+                          child: Text(year.toString()),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedYearDepartmentDetails = value;
+                    });
+                    _fetchDepartmentJobsReport();
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: DropdownButtonFormField<int>(
+                  value: _selectedMonthDepartmentDetails,
+                  decoration: const InputDecoration(
+                    labelText: 'เลือกเดือน',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _months
+                      .map(
+                        (month) => DropdownMenuItem<int>(
+                          value: month.value,
+                          child: Text(month.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedMonthDepartmentDetails = value;
+                    });
+                    _fetchDepartmentJobsReport();
+                  },
+                ),
+              ),
+              _buildCountChip('จำนวนงาน', _departmentJobDetailItems.length),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildLoadingErrorOrContent(
+            isLoading: _isLoadingDepartmentDetails,
+            error: _departmentDetailsError,
+            isEmpty: _departmentJobDetailItems.isEmpty,
+            emptyMessage: 'ไม่พบรายละเอียดงานของแผนกที่เลือก',
+            onRetry: _fetchDepartmentJobsReport,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('เลขที่งาน')),
+                  DataColumn(label: Text('หัวข้อ')),
+                  DataColumn(label: Text('หมวด')),
+                  DataColumn(label: Text('สถานะ')),
+                  DataColumn(label: Text('วันที่แจ้ง')),
+                ],
+                rows: _departmentJobDetailItems
+                    .map(
+                      (item) => DataRow(
+                        cells: [
+                          DataCell(Text(item.jobNo.isEmpty ? '-' : item.jobNo)),
+                          DataCell(Text(item.topic.isEmpty ? '-' : item.topic)),
+                          DataCell(
+                            Text(item.category.isEmpty ? '-' : item.category),
+                          ),
+                          DataCell(
+                            Text(item.status.isEmpty ? '-' : item.status),
+                          ),
+                          DataCell(
+                            Text(_normalizeDateTimeLabel(item.createdAt)),
+                          ),
+                        ],
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLoadingErrorOrContent({
     required bool isLoading,
     required String? error,
@@ -958,6 +1669,13 @@ class _MonthOption {
   final String label;
 }
 
+class _DepartmentOption {
+  const _DepartmentOption({required this.id, required this.label});
+
+  final int id;
+  final String label;
+}
+
 class _MonthlySummaryItem {
   const _MonthlySummaryItem({required this.monthLabel, required this.count});
 
@@ -982,4 +1700,27 @@ class _CategorySummaryItem {
 
   final String category;
   final int count;
+}
+
+class _DepartmentSummaryItem {
+  const _DepartmentSummaryItem({required this.label, required this.count});
+
+  final String label;
+  final int count;
+}
+
+class _DepartmentJobDetailItem {
+  const _DepartmentJobDetailItem({
+    required this.jobNo,
+    required this.topic,
+    required this.category,
+    required this.status,
+    required this.createdAt,
+  });
+
+  final String jobNo;
+  final String topic;
+  final String category;
+  final String status;
+  final String createdAt;
 }
