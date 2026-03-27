@@ -1279,23 +1279,29 @@ class _PurchaseDetailPageState extends State<PurchaseDetailPage> {
           FloatingActionButton(
             heroTag: 'pr_fab',
             onPressed: () async {
-              final initialPrValue =
-                  (raw['pr_no'] ?? raw['prNo'] ?? displayItem.no).toString();
-              final result = await showPrDialog(
-                context,
-                initialValue: initialPrValue == 'N/A' ? '' : initialPrValue,
-              );
-              if (result != null && mounted) {
-                final prValue = result['pr'] as String? ?? '';
-                if (prValue.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('PR saved: $prValue'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+              String? repairRequestId = _currentRepairRequestId;
+              if (repairRequestId == null || repairRequestId.isEmpty) {
+                repairRequestId = displayItem.id;
               }
+              if ((repairRequestId == null || repairRequestId.isEmpty) &&
+                  displayItem.rawData != null) {
+                repairRequestId =
+                    displayItem.rawData!['id']?.toString() ??
+                    displayItem.rawData!['repair_request_id']?.toString();
+              }
+
+              final initialPrValue =
+                  (raw['pr_no'] ?? raw['prNumber'] ?? raw['prNo'] ?? '')
+                      .toString();
+              final initialPrText = (raw['pr_text'] ?? raw['prText'] ?? '')
+                  .toString();
+
+              await showPrDialog(
+                context,
+                repairRequestId: repairRequestId,
+                initialValue: initialPrValue == 'N/A' ? '' : initialPrValue,
+                initialText: initialPrText == 'N/A' ? '' : initialPrText,
+              );
             },
             backgroundColor: const Color(0xFFED8936),
             foregroundColor: Colors.white,
